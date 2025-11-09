@@ -89,6 +89,12 @@ class BenchmarkReference(BaseModel):
 
     provider_id: str = Field(..., description="Provider identifier")
     benchmark_id: str = Field(..., description="Benchmark identifier")
+    weight: float = Field(
+        default=1.0, description="Weight for this benchmark in collection scoring"
+    )
+    config: dict[str, Any] = Field(
+        default_factory=dict, description="Benchmark-specific configuration"
+    )
 
 
 class Collection(BaseModel):
@@ -99,8 +105,23 @@ class Collection(BaseModel):
     collection_id: str = Field(..., description="Unique collection identifier")
     name: str = Field(..., description="Human-readable collection name")
     description: str = Field(..., description="Collection description")
+    provider_id: str | None = Field(
+        default=None, description="Primary provider for this collection"
+    )
+    tags: list[str] = Field(
+        default_factory=list, description="Tags for categorizing the collection"
+    )
+    metadata: dict[str, Any] = Field(
+        default_factory=dict, description="Additional collection metadata"
+    )
     benchmarks: list[BenchmarkReference] = Field(
         ..., description="List of benchmark references in this collection"
+    )
+    created_at: str | None = Field(
+        default=None, description="Collection creation timestamp"
+    )
+    updated_at: str | None = Field(
+        default=None, description="Collection last update timestamp"
     )
 
 
@@ -181,6 +202,49 @@ class ListCollectionsResponse(BaseModel):
         ..., description="List of available collections"
     )
     total_collections: int = Field(..., description="Total number of collections")
+
+
+class CollectionCreationRequest(BaseModel):
+    """Request for creating a new collection."""
+
+    model_config = ConfigDict(extra="allow")
+
+    collection_id: str = Field(..., description="Unique collection identifier")
+    name: str = Field(..., description="Human-readable collection name")
+    description: str = Field(..., description="Collection description")
+    provider_id: str | None = Field(
+        default=None, description="Primary provider for this collection"
+    )
+    tags: list[str] = Field(
+        default_factory=list, description="Tags for categorizing the collection"
+    )
+    metadata: dict[str, Any] = Field(
+        default_factory=dict, description="Additional collection metadata"
+    )
+    benchmarks: list[BenchmarkReference] = Field(
+        ..., description="List of benchmark references in this collection"
+    )
+
+
+class CollectionUpdateRequest(BaseModel):
+    """Request for updating an existing collection."""
+
+    model_config = ConfigDict(extra="allow")
+
+    name: str | None = Field(default=None, description="Human-readable collection name")
+    description: str | None = Field(default=None, description="Collection description")
+    provider_id: str | None = Field(
+        default=None, description="Primary provider for this collection"
+    )
+    tags: list[str] | None = Field(
+        default=None, description="Tags for categorizing the collection"
+    )
+    metadata: dict[str, Any] | None = Field(
+        default=None, description="Additional collection metadata"
+    )
+    benchmarks: list[BenchmarkReference] | None = Field(
+        default=None, description="List of benchmark references in this collection"
+    )
 
 
 class BenchmarkDetail(BaseModel):

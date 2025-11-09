@@ -19,7 +19,10 @@ The Evaluation Hub is designed to:
 ## Features
 
 - **Multi-Backend Support**: Orchestrates evaluations across different backends (lm-evaluation-harness, GuideLL, NeMo Evaluator, custom backends)
+- **Collection Management**: Create, manage, and execute curated collections of benchmarks with weighted scoring and automated provider task aggregation
+- **Native Collection Support**: Use `collection_id` directly in evaluation requests for automatic benchmark expansion and execution
 - **Model Management**: Register and manage language models through API and environment variables
+- **Provider & Benchmark Discovery**: Comprehensive API for discovering evaluation providers and their available benchmarks
 - **Remote Container Integration**: NeMo Evaluator Executor for connecting to remote @Evaluator containers
 - **Risk Category Automation**: Automatically generates appropriate benchmarks based on risk categories (low, medium, high, critical)
 - **Async Execution**: Handles requests concurrently with progress tracking
@@ -140,11 +143,12 @@ POST /api/v1/evaluations/benchmarks/lm_evaluation_harness/blimp
 {
   "model": {
     "server": "vllm",
-    "name": "gpt-4o-mini"
-  },
-  "model_configuration": {
-    "temperature": 0.0,
-    "max_tokens": 512
+    "name": "tinyllama",
+    "configuration": {
+      "temperature": 0.0,
+      "max_tokens": 512,
+      "top_p": 0.95
+    }
   },
   "timeout_minutes": 30,
   "retry_attempts": 1,
@@ -160,8 +164,7 @@ POST /api/v1/evaluations/benchmarks/lm_evaluation_harness/blimp
 **Request Parameters**:
 - `provider_id` (path): The provider identifier (e.g., `lm_evaluation_harness`)
 - `benchmark_id` (path): The benchmark identifier (e.g., `blimp`)
-- `model` (body, required): Model specification object with `server` and `name` fields
-- `model_configuration` (body, required): Model configuration parameters
+- `model` (body, required): Model specification object with `server`, `name`, and optional `configuration` fields
 - `timeout_minutes` (body, optional): Evaluation timeout in minutes (default: 60)
 - `retry_attempts` (body, optional): Number of retry attempts (default: 3)
 - `limit` (body, optional): Limit number of samples to evaluate
@@ -171,6 +174,273 @@ POST /api/v1/evaluations/benchmarks/lm_evaluation_harness/blimp
 
 **Response**: Same as standard evaluation endpoint (see below)
 
+## Collection Management
+
+The Evaluation Hub includes a comprehensive collection management system for creating, managing, and executing curated collections of benchmarks with weighted scoring and automated provider task aggregation.
+
+### Collection API Endpoints
+
+#### List All Collections
+**Endpoint**: `GET /api/v1/collections`
+
+**Response**:
+```json
+{
+  "collections": [
+    {
+      "collection_id": "coding_reasoning_v1",
+      "name": "Coding & Reasoning Collection v1",
+      "description": "A curated collection of coding and reasoning benchmarks",
+      "provider_id": "lm_evaluation_harness",
+      "benchmarks": [
+        {
+          "provider_id": "lm_evaluation_harness",
+          "benchmark_id": "arc_easy",
+          "weight": 1.5,
+          "config": {
+            "num_fewshot": 25,
+            "limit": 100
+          }
+        },
+        {
+          "provider_id": "lm_evaluation_harness",
+          "benchmark_id": "humaneval",
+          "weight": 2.0,
+          "config": {
+            "num_fewshot": 0,
+            "limit": 50
+          }
+        }
+      ],
+      "tags": ["coding", "reasoning", "v1"],
+      "created_at": "2024-01-15T10:30:00Z"
+    }
+  ],
+  "total_collections": 1
+}
+```
+
+#### Get Collection by ID
+**Endpoint**: `GET /api/v1/collections/{collection_id}`
+
+**Example**:
+```bash
+curl "http://localhost:8000/api/v1/collections/coding_reasoning_v1"
+```
+
+#### Create New Collection
+**Endpoint**: `POST /api/v1/collections`
+
+**Request Body**:
+```json
+{
+  "collection_id": "coding_reasoning_v1",
+  "name": "Coding & Reasoning Collection v1",
+  "description": "A curated collection of coding and reasoning benchmarks using available lm-evaluation-harness tasks",
+  "tags": ["coding", "reasoning", "v1"],
+  "benchmarks": [
+    {
+      "provider_id": "lm_evaluation_harness",
+      "benchmark_id": "arc_easy",
+      "weight": 1.5,
+      "config": {
+        "num_fewshot": 25,
+        "limit": 100
+      }
+    },
+    {
+      "provider_id": "lm_evaluation_harness",
+      "benchmark_id": "humaneval",
+      "weight": 2.0,
+      "config": {
+        "num_fewshot": 0,
+        "limit": 50
+      }
+    },
+    {
+      "provider_id": "lm_evaluation_harness",
+      "benchmark_id": "mbpp",
+      "weight": 2.0,
+      "config": {
+        "num_fewshot": 0,
+        "limit": 50
+      }
+    },
+    {
+      "provider_id": "lm_evaluation_harness",
+      "benchmark_id": "bbh",
+      "weight": 1.5,
+      "config": {
+        "num_fewshot": 3,
+        "limit": 100
+      }
+    }
+  ],
+  "metadata": {
+    "created_by": "evaluation_team",
+    "use_case": "coding_reasoning_assessment",
+    "difficulty": "intermediate_to_hard",
+    "estimated_duration_minutes": 30
+  }
+}
+```
+
+#### Update Collection
+**Endpoint**: `PUT /api/v1/collections/{collection_id}`
+
+#### Delete Collection
+**Endpoint**: `DELETE /api/v1/collections/{collection_id}`
+
+### Collection-Based Evaluations
+
+#### Native Collection Support
+Use `collection_id` directly in evaluation requests for automatic benchmark expansion and execution:
+
+**Endpoint**: `POST /api/v1/evaluations`
+
+**Example with collection_id**:
+```json
+{
+  "request_id": "550e8400-e29b-41d4-a716-446655440000",
+  "experiment_name": "Coding & Reasoning Collection Evaluation",
+  "evaluations": [
+    {
+      "name": "TinyLlama Coding & Reasoning",
+      "description": "Evaluation using coding_reasoning_v1 collection with automatic expansion",
+      "model": {
+        "server": "vllm",
+        "name": "tinyllama",
+        "configuration": {
+          "temperature": 0.0,
+          "max_tokens": 512,
+          "top_p": 0.95
+        }
+      },
+      "collection_id": "coding_reasoning_v1",
+      "timeout_minutes": 60,
+      "retry_attempts": 1
+    }
+  ],
+  "tags": {
+    "evaluation_type": "collection",
+    "collection_id": "coding_reasoning_v1",
+    "model_family": "llama"
+  }
+}
+```
+
+**How Collection Expansion Works**:
+1. ✅ Eval-hub automatically looks up the collection by ID
+2. ✅ Extracts all benchmarks from the collection
+3. ✅ Groups benchmarks by provider for efficient execution
+4. ✅ Creates appropriate backend configurations with preserved weights and configs
+5. 🔄 Executes with proper task aggregation (e.g., LMEval runs all tasks in single Custom Resource)
+
+#### Collection Processing Flow
+
+```mermaid
+flowchart TD
+    A[🔍 Evaluation Request with collection_id] --> B[📋 Lookup Collection]
+    B --> C[📦 Collection: coding_reasoning_v1]
+
+    C --> D[🔄 Extract & Group Benchmarks]
+
+    D --> E1[📊 lm_evaluation_harness Group]
+    D --> E2[🔬 ragas Group]
+    D --> E3[🛡️ garak Group]
+
+    E1 --> F1["🎯 LMEval Backend Config
+    - arc_easy (weight: 1.5)
+    - humaneval (weight: 2.0)
+    - mbpp (weight: 2.0)
+    - bbh (weight: 1.5)"]
+    E2 --> F2["🔍 RAGAS Backend Config
+    - faithfulness
+    - answer_relevancy"]
+    E3 --> F3["🛡️ Garak Backend Config
+    - toxicity
+    - bias_detection"]
+
+    F1 --> G1["⚡ LMEval Task Aggregation
+    Single CR: [arc_easy, humaneval, mbpp, bbh]"]
+    F2 --> G2["🔍 RAGAS Execution
+    Individual benchmarks"]
+    F3 --> G3["🛡️ Garak Execution
+    Individual benchmarks"]
+
+    G1 --> H[📊 Results Aggregation]
+    G2 --> H
+    G3 --> H
+
+    H --> I["🎯 Weighted Final Score
+    Based on collection weights"]
+
+    style A fill:#e1f5fe
+    style C fill:#fff3e0
+    style D fill:#f3e5f5
+    style E1 fill:#e8f5e8
+    style E2 fill:#fff3e0
+    style E3 fill:#fce4ec
+    style H fill:#e0f2f1
+    style I fill:#e1f5fe
+```
+
+**Key Processing Details**:
+- **Provider Grouping**: Benchmarks automatically grouped by `provider_id` for optimal execution
+- **Weight Preservation**: Individual benchmark weights maintained through the process
+- **LMEval Optimization**: All lm-evaluation-harness tasks combined into single execution for efficiency
+- **Config Inheritance**: Benchmark-specific configs (num_fewshot, limit) preserved per benchmark
+- **Parallel Execution**: Different provider groups can execute in parallel
+- **Result Aggregation**: Final scoring uses preserved weights for accurate collection-level metrics
+
+### Provider & Benchmark Discovery
+
+#### List All Providers
+**Endpoint**: `GET /api/v1/providers`
+
+**Response**:
+```json
+{
+  "providers": [
+    {
+      "provider_id": "lm_evaluation_harness",
+      "provider_name": "LM Evaluation Harness",
+      "description": "Comprehensive evaluation framework for language models with 167 benchmarks",
+      "provider_type": "builtin",
+      "benchmark_count": 167
+    }
+  ],
+  "total_providers": 4
+}
+```
+
+#### Get Provider Details
+**Endpoint**: `GET /api/v1/providers/{provider_id}`
+
+#### List Provider Benchmarks
+**Endpoint**: `GET /api/v1/providers/{provider_id}/benchmarks`
+
+#### List All Benchmarks
+**Endpoint**: `GET /api/v1/benchmarks`
+
+**Query Parameters**:
+- `category` (optional): Filter by benchmark category (e.g., "math", "code", "reasoning")
+- `provider_id` (optional): Filter by provider
+
+**Example**:
+```bash
+curl "http://localhost:8000/api/v1/benchmarks?category=code&provider_id=lm_evaluation_harness"
+```
+
+### Collection Best Practices
+
+1. **Weighted Scoring**: Use benchmark weights to reflect importance in aggregate scoring
+2. **Coherent Collections**: Group related benchmarks that assess similar capabilities
+3. **Configuration Consistency**: Use consistent `num_fewshot` and `limit` settings within collections
+4. **Descriptive Metadata**: Include comprehensive metadata for collection discovery and management
+5. **Version Management**: Use version tags (v1, v2) for collection evolution
+6. **Provider Optimization**: Group benchmarks by provider for efficient execution
+
 ### Creating an Evaluation Request
 
 **Endpoint**: `POST /api/v1/evaluations`
@@ -179,24 +449,36 @@ POST /api/v1/evaluations/benchmarks/lm_evaluation_harness/blimp
 ```json
 {
   "request_id": "550e8400-e29b-41d4-a716-446655440000",
+  "experiment_name": "Explicit Backend Evaluation",
   "evaluations": [
     {
-      "name": "GPT-4 Evaluation",
-      "model_name": "gpt-4",
+      "name": "TinyLlama Evaluation",
+      "description": "Evaluation with explicit lm-evaluation-harness configuration",
+      "model": {
+        "server": "vllm",
+        "name": "tinyllama",
+        "configuration": {
+          "temperature": 0.0,
+          "max_tokens": 512,
+          "top_p": 0.95
+        }
+      },
       "backends": [
         {
           "name": "lm-evaluation-harness",
           "type": "lm-evaluation-harness",
           "benchmarks": [
             {
-              "name": "hellaswag",
-              "tasks": ["hellaswag"],
+              "name": "arc_easy",
+              "tasks": ["arc_easy"],
               "num_fewshot": 5,
-              "limit": 1000
+              "limit": 100
             }
           ]
         }
-      ]
+      ],
+      "timeout_minutes": 30,
+      "retry_attempts": 1
     }
   ]
 }
@@ -206,11 +488,22 @@ POST /api/v1/evaluations/benchmarks/lm_evaluation_harness/blimp
 ```json
 {
   "request_id": "550e8400-e29b-41d4-a716-446655440001",
+  "experiment_name": "Risk-Based Evaluation",
   "evaluations": [
     {
       "name": "High Risk Model Evaluation",
-      "model_name": "new-experimental-model",
-      "risk_category": "high"
+      "description": "Evaluation using high risk category benchmarks",
+      "model": {
+        "server": "vllm",
+        "name": "tinyllama",
+        "configuration": {
+          "temperature": 0.1,
+          "max_tokens": 256
+        }
+      },
+      "risk_category": "high",
+      "timeout_minutes": 45,
+      "retry_attempts": 2
     }
   ]
 }
@@ -437,22 +730,36 @@ Models registered through the model management system can be referenced by their
 
 ```json
 {
+  "request_id": "550e8400-e29b-41d4-a716-446655440002",
+  "experiment_name": "Claude 3 Evaluation",
   "evaluations": [
     {
       "name": "Claude 3 Evaluation",
-      "model_name": "claude-3-sonnet",  // References registered model ID
+      "description": "Evaluation using registered Claude 3 model",
+      "model": {
+        "server": "claude-server",
+        "name": "claude-3-sonnet",
+        "configuration": {
+          "temperature": 0.7,
+          "max_tokens": 4000
+        }
+      },
       "backends": [
         {
           "name": "lm-evaluation-harness",
           "type": "lm-evaluation-harness",
           "benchmarks": [
             {
-              "name": "hellaswag",
-              "tasks": ["hellaswag"]
+              "name": "arc_easy",
+              "tasks": ["arc_easy"],
+              "num_fewshot": 5,
+              "limit": 100
             }
           ]
         }
-      ]
+      ],
+      "timeout_minutes": 60,
+      "retry_attempts": 1
     }
   ]
 }
@@ -590,10 +897,20 @@ The eval-hub uses the NeMo Evaluator Executor to connect to remote @Evaluator co
 **Single Remote Container**:
 ```json
 {
+  "request_id": "550e8400-e29b-41d4-a716-446655440003",
+  "experiment_name": "NeMo Evaluator Single Container",
   "evaluations": [
     {
-      "name": "GPT-4 Evaluation",
-      "model_name": "gpt-4-turbo",
+      "name": "GPT-4 Evaluation via NeMo",
+      "description": "Remote evaluation using NeMo Evaluator container",
+      "model": {
+        "server": "openai",
+        "name": "gpt-4-turbo",
+        "configuration": {
+          "temperature": 0.0,
+          "max_tokens": 512
+        }
+      },
       "backends": [
         {
           "name": "remote-nemo",
@@ -613,7 +930,9 @@ The eval-hub uses the NeMo Evaluator Executor to connect to remote @Evaluator co
             }
           ]
         }
-      ]
+      ],
+      "timeout_minutes": 60,
+      "retry_attempts": 1
     }
   ]
 }
@@ -622,10 +941,21 @@ The eval-hub uses the NeMo Evaluator Executor to connect to remote @Evaluator co
 **Multiple Specialized Containers**:
 ```json
 {
+  "request_id": "550e8400-e29b-41d4-a716-446655440004",
+  "experiment_name": "Multi-Container NeMo Evaluation",
   "evaluations": [
     {
       "name": "Multi-Container Evaluation",
-      "model_name": "llama-3.1-8b",
+      "description": "Distributed evaluation across specialized NeMo containers",
+      "model": {
+        "server": "groq",
+        "name": "llama-3.1-8b",
+        "configuration": {
+          "temperature": 0.1,
+          "max_tokens": 512,
+          "top_p": 0.95
+        }
+      },
       "backends": [
         {
           "name": "academic-evaluator",
@@ -654,7 +984,9 @@ The eval-hub uses the NeMo Evaluator Executor to connect to remote @Evaluator co
             { "name": "math", "tasks": ["hendrycks_math"] }
           ]
         }
-      ]
+      ],
+      "timeout_minutes": 120,
+      "retry_attempts": 2
     }
   ]
 }

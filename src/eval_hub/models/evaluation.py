@@ -81,16 +81,18 @@ class EvaluationSpec(BaseModel):
     id: UUID = Field(default_factory=uuid4, description="Unique evaluation ID")
     name: str = Field(..., description="Human-readable evaluation name")
     description: str | None = Field(None, description="Evaluation description")
-    model_server_id: str | None = Field(None, description="Model server identifier")
-    model_name: str = Field(..., description="Name of the model on the server")
-    model_configuration: dict[str, Any] = Field(
-        default_factory=dict, description="Model configuration"
+    model: dict[str, Any] = Field(
+        ...,
+        description="Model specification with 'server', 'name', and optional 'configuration' fields",
     )
     backends: list[BackendSpec] = Field(
-        ..., description="Backends to run evaluations on"
+        default_factory=list, description="Backends to run evaluations on"
     )
     risk_category: RiskCategory | None = Field(
         None, description="Risk category for automatic benchmark selection"
+    )
+    collection_id: str | None = Field(
+        None, description="Collection ID for automatic benchmark selection"
     )
     priority: int = Field(
         default=0, description="Evaluation priority (higher = more urgent)"
@@ -104,6 +106,30 @@ class EvaluationSpec(BaseModel):
     metadata: dict[str, Any] = Field(
         default_factory=dict, description="Additional metadata"
     )
+
+    @property
+    def model_server_id(self) -> str:
+        """Get model server ID from nested model object."""
+        return self.model.get("server", "")
+
+    @property
+    def model_name(self) -> str:
+        """Get model name from nested model object."""
+        return self.model.get("name", "")
+
+    @property
+    def model_configuration(self) -> dict[str, Any]:
+        """Get model configuration from nested model object."""
+        return self.model.get("configuration", {})
+
+    @model_validator(mode="after")
+    def validate_model_fields(self) -> "EvaluationSpec":
+        """Validate that model object contains required 'server' and 'name' fields."""
+        if "server" not in self.model:
+            raise ValueError("model.server is required")
+        if "name" not in self.model:
+            raise ValueError("model.name is required")
+        return self
 
 
 class SingleBenchmarkEvaluationRequest(BaseModel):

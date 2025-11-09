@@ -43,6 +43,8 @@ from ..models.model import (
 from ..models.provider import (
     BenchmarkDetail,
     Collection,
+    CollectionCreationRequest,
+    CollectionUpdateRequest,
     ListBenchmarksResponse,
     ListCollectionsResponse,
     ListProvidersResponse,
@@ -327,6 +329,7 @@ async def create_evaluation(
     mlflow_client: MLFlowClient = Depends(get_mlflow_client),
     response_builder: ResponseBuilder = Depends(get_response_builder),
     settings: Settings = Depends(get_settings),
+    provider_service: ProviderService = Depends(get_provider_service),
 ) -> EvaluationResponse:
     """Create and execute evaluation request."""
     logger.info(
@@ -338,7 +341,9 @@ async def create_evaluation(
 
     try:
         # Parse and validate the request
-        parsed_request = await parser.parse_evaluation_request(request)
+        parsed_request = await parser.parse_evaluation_request(
+            request, provider_service
+        )
 
         # Create MLFlow experiment (mocked)
         experiment_id = await mlflow_client.create_experiment(parsed_request)
@@ -709,6 +714,123 @@ async def get_collection(
     return collection
 
 
+@router.post(
+    "/collections", response_model=Collection, status_code=status.HTTP_201_CREATED
+)
+async def create_collection(
+    request: CollectionCreationRequest,
+    provider_service: ProviderService = Depends(get_provider_service),
+) -> Collection:
+    """Create a new collection."""
+    try:
+        collection = provider_service.create_collection(request)
+        logger.info(
+            "Collection created successfully",
+            collection_id=request.collection_id,
+        )
+        return collection
+    except ValueError as e:
+        logger.error(
+            "Failed to create collection",
+            collection_id=request.collection_id,
+            error=str(e),
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        ) from e
+    except Exception as e:
+        logger.error(
+            "Unexpected error creating collection",
+            collection_id=request.collection_id,
+            error=str(e),
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create collection: {str(e)}",
+        ) from e
+
+
+@router.put("/collections/{collection_id}", response_model=Collection)
+async def update_collection(
+    collection_id: str,
+    request: CollectionUpdateRequest,
+    provider_service: ProviderService = Depends(get_provider_service),
+) -> Collection:
+    """Update an existing collection."""
+    try:
+        collection = provider_service.update_collection(collection_id, request)
+        if not collection:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Collection {collection_id} not found",
+            )
+
+        logger.info("Collection updated successfully", collection_id=collection_id)
+        return collection
+    except ValueError as e:
+        logger.error(
+            "Failed to update collection",
+            collection_id=collection_id,
+            error=str(e),
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        ) from e
+    except Exception as e:
+        logger.error(
+            "Unexpected error updating collection",
+            collection_id=collection_id,
+            error=str(e),
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update collection: {str(e)}",
+        ) from e
+
+
+@router.delete("/collections/{collection_id}")
+async def delete_collection(
+    collection_id: str,
+    provider_service: ProviderService = Depends(get_provider_service),
+) -> JSONResponse:
+    """Delete a collection."""
+    try:
+        success = provider_service.delete_collection(collection_id)
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Collection {collection_id} not found",
+            )
+
+        logger.info("Collection deleted successfully", collection_id=collection_id)
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={"message": f"Collection {collection_id} deleted successfully"},
+        )
+    except ValueError as e:
+        logger.error(
+            "Failed to delete collection",
+            collection_id=collection_id,
+            error=str(e),
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        ) from e
+    except Exception as e:
+        logger.error(
+            "Unexpected error deleting collection",
+            collection_id=collection_id,
+            error=str(e),
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete collection: {str(e)}",
+        ) from e
+
+
 @router.post("/providers/reload")
 async def reload_providers(
     provider_service: ProviderService = Depends(get_provider_service),
@@ -1054,6 +1176,63 @@ async def reload_runtime_servers(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to reload runtime servers: {str(e)}",
+        ) from e
+
+
+# Evaluation Results Callback Endpoint (for Job completion callbacks)
+
+
+@router.post("/api/v1/evaluation-results")
+async def receive_evaluation_results(
+    request: dict[str, Any],
+) -> dict[str, str]:
+    """Receive evaluation results from completed evaluation jobs via HTTP callback."""
+    logger.info(
+        "Received evaluation results callback",
+        task_name=request.get("task_name"),
+        score=request.get("score"),
+        pass_at_1=request.get("pass@1"),
+    )
+
+    try:
+        # Extract evaluation results from the payload
+        task_name = request.get("task_name", "unknown")
+        score = request.get("score", 0.0)
+        pass_at_1 = request.get("pass@1", 0.0)
+
+        # Log the results (in production, you'd store these in a database)
+        logger.info(
+            "Processing evaluation results",
+            task_name=task_name,
+            score=score,
+            pass_at_1=pass_at_1,
+            full_results=request,
+        )
+
+        # Here you could:
+        # 1. Store results in database
+        # 2. Update active evaluation status
+        # 3. Trigger notifications
+        # 4. Update MLFlow experiments
+        # 5. Send to external systems
+
+        # For now, just acknowledge receipt
+        return {
+            "status": "received",
+            "message": f"Results for {task_name} received successfully",
+            "task_name": task_name,
+            "timestamp": utcnow().isoformat(),
+        }
+
+    except Exception as e:
+        logger.error(
+            "Failed to process evaluation results callback",
+            error=str(e),
+            request_data=request,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to process evaluation results: {str(e)}",
         ) from e
 
 

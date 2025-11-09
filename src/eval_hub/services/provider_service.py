@@ -9,6 +9,8 @@ from ..core.logging import get_logger
 from ..models.provider import (
     BenchmarkDetail,
     Collection,
+    CollectionCreationRequest,
+    CollectionUpdateRequest,
     ListBenchmarksResponse,
     ListCollectionsResponse,
     ListProvidersResponse,
@@ -249,3 +251,121 @@ class ProviderService:
         self._collections_by_id.clear()
         self._load_providers_data()
         logger.info("Providers configuration reloaded")
+
+    def create_collection(self, request: CollectionCreationRequest) -> Collection:
+        """Create a new collection."""
+        from datetime import datetime
+
+        self._load_providers_data()
+
+        # Check if collection already exists
+        if request.collection_id in self._collections_by_id:
+            raise ValueError(f"Collection {request.collection_id} already exists")
+
+        # Validate that all benchmarks exist
+        for benchmark_ref in request.benchmarks:
+            composite_key = f"{benchmark_ref.provider_id}::{benchmark_ref.benchmark_id}"
+            if composite_key not in self._benchmarks_by_id:
+                raise ValueError(
+                    f"Benchmark {benchmark_ref.provider_id}::{benchmark_ref.benchmark_id} not found"
+                )
+
+        # Create the collection
+        now = datetime.utcnow().isoformat() + "Z"
+        collection = Collection(
+            collection_id=request.collection_id,
+            name=request.name,
+            description=request.description,
+            provider_id=request.provider_id,
+            tags=request.tags,
+            metadata=request.metadata,
+            benchmarks=request.benchmarks,
+            created_at=now,
+            updated_at=now,
+        )
+
+        # Store in memory (in a real implementation, this would persist to storage)
+        self._collections_by_id[collection.collection_id] = collection
+        if self._providers_data:
+            self._providers_data.collections.append(collection)
+
+        logger.info(f"Created collection {collection.collection_id}")
+        return collection
+
+    def update_collection(
+        self, collection_id: str, request: CollectionUpdateRequest
+    ) -> Collection | None:
+        """Update an existing collection."""
+        from datetime import datetime
+
+        self._load_providers_data()
+
+        collection = self._collections_by_id.get(collection_id)
+        if not collection:
+            return None
+
+        # Validate benchmarks if being updated
+        if request.benchmarks is not None:
+            for benchmark_ref in request.benchmarks:
+                composite_key = (
+                    f"{benchmark_ref.provider_id}::{benchmark_ref.benchmark_id}"
+                )
+                if composite_key not in self._benchmarks_by_id:
+                    raise ValueError(
+                        f"Benchmark {benchmark_ref.provider_id}::{benchmark_ref.benchmark_id} not found"
+                    )
+
+        # Update fields that are provided
+        update_data = {}
+        if request.name is not None:
+            update_data["name"] = request.name
+        if request.description is not None:
+            update_data["description"] = request.description
+        if request.provider_id is not None:
+            update_data["provider_id"] = request.provider_id
+        if request.tags is not None:
+            update_data["tags"] = request.tags
+        if request.metadata is not None:
+            update_data["metadata"] = request.metadata
+        if request.benchmarks is not None:
+            update_data["benchmarks"] = request.benchmarks
+
+        # Update timestamp
+        update_data["updated_at"] = datetime.utcnow().isoformat() + "Z"
+
+        # Create updated collection
+        updated_collection = collection.model_copy(update=update_data)
+
+        # Store in memory
+        self._collections_by_id[collection_id] = updated_collection
+
+        # Update in providers data list
+        if self._providers_data:
+            for i, coll in enumerate(self._providers_data.collections):
+                if coll.collection_id == collection_id:
+                    self._providers_data.collections[i] = updated_collection
+                    break
+
+        logger.info(f"Updated collection {collection_id}")
+        return updated_collection
+
+    def delete_collection(self, collection_id: str) -> bool:
+        """Delete a collection."""
+        self._load_providers_data()
+
+        if collection_id not in self._collections_by_id:
+            return False
+
+        # Remove from memory
+        del self._collections_by_id[collection_id]
+
+        # Remove from providers data list
+        if self._providers_data:
+            self._providers_data.collections = [
+                coll
+                for coll in self._providers_data.collections
+                if coll.collection_id != collection_id
+            ]
+
+        logger.info(f"Deleted collection {collection_id}")
+        return True

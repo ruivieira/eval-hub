@@ -1998,9 +1998,9 @@ providers:
     tags:
     - code
     - lm_eval
-  - benchmark_id: mbpp_instruct
-    name: Mbpp Instruct
-    description: Mbpp Instruct evaluation benchmark
+  - benchmark_id: mbpp
+    name: MBPP
+    description: MBPP (Most Basic Python Programming) evaluation benchmark
     category: code
     metrics:
     - accuracy

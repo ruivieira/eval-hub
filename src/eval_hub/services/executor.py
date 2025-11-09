@@ -12,6 +12,7 @@ from ..core.logging import get_logger, log_evaluation_complete, log_evaluation_s
 from ..executors import ExecutionContext, ExecutorFactory
 from ..models.evaluation import (
     BackendSpec,
+    BackendType,
     BenchmarkSpec,
     EvaluationRequest,
     EvaluationResult,
@@ -183,32 +184,104 @@ class EvaluationExecutor:
 
         results = []
 
-        # Execute each benchmark
-        for benchmark in backend.benchmarks:
+        # Special handling for LMEval backends - group all benchmarks into a single execution
+        if backend.type == BackendType.LMEVAL:
+            self.logger.info(
+                "Grouping LMEval benchmarks for single execution",
+                evaluation_id=str(evaluation.id),
+                backend_name=backend.name,
+                benchmark_count=len(backend.benchmarks),
+            )
+
             try:
+                # Combine all benchmark tasks into a single benchmark spec
+                all_tasks = []
+                all_benchmark_names = []
+                combined_config = {}
+
+                for benchmark in backend.benchmarks:
+                    all_tasks.extend(benchmark.tasks)
+                    all_benchmark_names.append(benchmark.name)
+                    # Merge configs (later configs override earlier ones)
+                    combined_config.update(benchmark.config)
+
+                # Create combined benchmark spec
+                combined_benchmark = BenchmarkSpec(
+                    name=f"collection-{'-'.join(all_benchmark_names)}",
+                    tasks=all_tasks,
+                    config=combined_config,
+                    # Use the first benchmark's settings for these fields
+                    num_fewshot=(
+                        backend.benchmarks[0].num_fewshot
+                        if backend.benchmarks
+                        else None
+                    ),
+                    batch_size=(
+                        backend.benchmarks[0].batch_size if backend.benchmarks else None
+                    ),
+                    limit=backend.benchmarks[0].limit if backend.benchmarks else None,
+                    device=backend.benchmarks[0].device if backend.benchmarks else None,
+                )
+
+                self.logger.info(
+                    "Created combined LMEval benchmark",
+                    evaluation_id=str(evaluation.id),
+                    combined_name=combined_benchmark.name,
+                    task_count=len(all_tasks),
+                    tasks=all_tasks,
+                )
+
+                # Execute the combined benchmark
                 result = await self._execute_benchmark(
-                    evaluation, backend, benchmark, progress_callback
+                    evaluation, backend, combined_benchmark, progress_callback
                 )
                 results.append(result)
+
             except Exception as e:
                 self.logger.error(
-                    "Benchmark execution failed",
+                    "Combined LMEval execution failed",
                     evaluation_id=str(evaluation.id),
                     backend_name=backend.name,
-                    benchmark_name=benchmark.name,
                     error=str(e),
                 )
-                # Create error result
+                # Create error result for the combined execution
                 error_result = EvaluationResult(
                     evaluation_id=evaluation.id,
                     backend_name=backend.name,
-                    benchmark_name=benchmark.name,
+                    benchmark_name=f"collection-{'-'.join([b.name for b in backend.benchmarks])}",
                     status=EvaluationStatus.FAILED,
                     error_message=str(e),
                     started_at=utcnow(),
                     completed_at=utcnow(),
                 )
                 results.append(error_result)
+        else:
+            # Original behavior for non-LMEval backends - execute each benchmark individually
+            for benchmark in backend.benchmarks:
+                try:
+                    result = await self._execute_benchmark(
+                        evaluation, backend, benchmark, progress_callback
+                    )
+                    results.append(result)
+                except Exception as e:
+                    self.logger.error(
+                        "Benchmark execution failed",
+                        evaluation_id=str(evaluation.id),
+                        backend_name=backend.name,
+                        benchmark_name=benchmark.name,
+                        error=str(e),
+                    )
+                    # Create error result
+                    error_result = EvaluationResult(
+                        evaluation_id=evaluation.id,
+                        backend_name=backend.name,
+                        benchmark_name=benchmark.name,
+                        status=EvaluationStatus.FAILED,
+                        error_message=str(e),
+                        started_at=utcnow(),
+                        completed_at=utcnow(),
+                    )
+                    results.append(error_result)
 
         return results
 

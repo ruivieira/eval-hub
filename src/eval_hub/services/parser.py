@@ -21,7 +21,7 @@ class RequestParser:
         self.logger = get_logger(__name__)
 
     async def parse_evaluation_request(
-        self, request: EvaluationRequest
+        self, request: EvaluationRequest, provider_service=None
     ) -> EvaluationRequest:
         """Parse and validate an evaluation request."""
         self.logger.info(
@@ -36,7 +36,9 @@ class RequestParser:
         # Process each evaluation spec
         processed_evaluations = []
         for eval_spec in request.evaluations:
-            processed_spec = await self._process_evaluation_spec(eval_spec)
+            processed_spec = await self._process_evaluation_spec(
+                eval_spec, provider_service
+            )
             processed_evaluations.append(processed_spec)
 
         # Create processed request
@@ -71,9 +73,9 @@ class RequestParser:
         if not spec.model_name:
             raise ValidationError(f"{context}: model_name is required")
 
-        if not spec.backends and not spec.risk_category:
+        if not spec.backends and not spec.risk_category and not spec.collection_id:
             raise ValidationError(
-                f"{context}: must specify either backends or risk_category"
+                f"{context}: must specify one of: backends, risk_category, or collection_id"
             )
 
         if spec.timeout_minutes <= 0:
@@ -131,7 +133,9 @@ class RequestParser:
         if benchmark.limit is not None and benchmark.limit <= 0:
             raise ValidationError(f"{context}: limit must be positive")
 
-    async def _process_evaluation_spec(self, spec: EvaluationSpec) -> EvaluationSpec:
+    async def _process_evaluation_spec(
+        self, spec: EvaluationSpec, provider_service=None
+    ) -> EvaluationSpec:
         """Process an evaluation specification, expanding risk categories if needed."""
         processed_spec = spec.model_copy()
 
@@ -144,6 +148,17 @@ class RequestParser:
             )
             processed_spec.backends = await self._generate_backends_from_risk_category(
                 spec.risk_category, spec.model_name
+            )
+
+        # If collection ID is specified but no backends, generate backends
+        elif spec.collection_id and not spec.backends:
+            self.logger.info(
+                "Generating backends from collection",
+                evaluation_id=str(spec.id),
+                collection_id=spec.collection_id,
+            )
+            processed_spec.backends = await self._generate_backends_from_collection(
+                spec.collection_id, spec.model_name, provider_service
             )
 
         # Apply default configurations to backends
@@ -197,6 +212,80 @@ class RequestParser:
                 "Generated backend from risk category",
                 backend_name=backend_name,
                 risk_category=risk_category,
+                benchmark_count=len(benchmarks),
+            )
+
+        return backends
+
+    async def _generate_backends_from_collection(
+        self, collection_id: str, model_name: str, provider_service=None
+    ) -> list[BackendSpec]:
+        """Generate backend specifications based on collection ID."""
+        if provider_service is None:
+            raise ValidationError(
+                "Provider service is required for collection expansion"
+            )
+
+        # Get the collection
+        collection = provider_service.get_collection_by_id(collection_id)
+        if collection is None:
+            raise ValidationError(f"Collection {collection_id} not found")
+
+        self.logger.info(
+            "Expanding collection to backends",
+            collection_id=collection_id,
+            benchmark_count=len(collection.benchmarks),
+        )
+
+        # Group benchmarks by provider
+        providers = {}
+        for benchmark_ref in collection.benchmarks:
+            provider_id = benchmark_ref.provider_id
+            if provider_id not in providers:
+                providers[provider_id] = []
+            providers[provider_id].append(benchmark_ref)
+
+        # Create backend configurations
+        backends = []
+        backend_type_map = {
+            "lm_evaluation_harness": BackendType.LMEVAL,
+            "nemo_evaluator": BackendType.NEMO_EVALUATOR,
+            "guidellm": BackendType.GUIDELLM,
+        }
+
+        for provider_id, benchmark_refs in providers.items():
+            # Map provider to backend type
+            backend_type = backend_type_map.get(provider_id, BackendType.CUSTOM)
+
+            # Create benchmarks for this backend
+            benchmarks = []
+            for benchmark_ref in benchmark_refs:
+                benchmark = BenchmarkSpec(
+                    name=benchmark_ref.benchmark_id,
+                    tasks=[benchmark_ref.benchmark_id],
+                    config=benchmark_ref.config.copy(),
+                    # Copy other fields from benchmark reference
+                    **{
+                        k: v
+                        for k, v in benchmark_ref.config.items()
+                        if k in {"num_fewshot", "batch_size", "limit", "device"}
+                    },
+                )
+                benchmarks.append(benchmark)
+
+            # Create backend spec
+            backend = BackendSpec(
+                name=f"collection-{provider_id}",
+                type=backend_type,
+                benchmarks=benchmarks,
+                config={"batch_size": 1, "device": "auto"},
+            )
+            backends.append(backend)
+
+            self.logger.debug(
+                "Generated backend from collection",
+                backend_name=backend.name,
+                provider_id=provider_id,
                 benchmark_count=len(benchmarks),
             )
 
