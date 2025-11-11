@@ -1,5 +1,5 @@
 # Multi-stage build for the evaluation hub
-FROM registry.access.redhat.com/ubi9/python-312:latest as builder
+FROM registry.access.redhat.com/ubi9/python-312-minimal:latest as builder
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -23,7 +23,7 @@ RUN uv pip install --system --python /opt/app-root/bin/python3 -e .
 COPY src/ ./src/
 
 # Production stage
-FROM registry.access.redhat.com/ubi9/python-312:latest as production
+FROM registry.access.redhat.com/ubi9/python-312-minimal:latest as production
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
