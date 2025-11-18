@@ -8,9 +8,9 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-import yaml
-from kubernetes import client, config
-from kubernetes.client.rest import ApiException
+import yaml  # type: ignore[import-untyped]
+from kubernetes import client, config  # type: ignore[import-untyped]
+from kubernetes.client.rest import ApiException  # type: ignore[import-untyped]
 
 from ..core.exceptions import BackendError
 from ..core.logging import get_logger
@@ -250,6 +250,7 @@ class LMEvalExecutor(Executor):
                 started_at=context.started_at,
                 completed_at=utcnow(),
                 duration_seconds=safe_duration_seconds(utcnow(), context.started_at),
+                mlflow_run_id=None,
             )
 
     async def cleanup(self) -> None:
@@ -415,17 +416,21 @@ class LMEvalExecutor(Executor):
 
         # Add pod configuration if env vars are present
         if pod_env:
-            job_cr["spec"]["pod"] = {
-                "container": {
-                    "env": pod_env,
+            spec_dict = job_cr["spec"]
+            if isinstance(spec_dict, dict):
+                spec_dict["pod"] = {
+                    "container": {
+                        "env": pod_env,
+                    }
                 }
-            }
 
         # Add optional fields
-        if limit is not None:
-            job_cr["spec"]["limit"] = str(limit)
-        if num_fewshot is not None:
-            job_cr["spec"]["numFewshot"] = num_fewshot
+        spec_dict = job_cr["spec"]
+        if isinstance(spec_dict, dict):
+            if limit is not None:
+                spec_dict["limit"] = str(limit)
+            if num_fewshot is not None:
+                spec_dict["numFewshot"] = num_fewshot
 
         return job_cr
 
@@ -584,12 +589,12 @@ class LMEvalExecutor(Executor):
             # Load results from output file
             if Path(output_file).exists():
                 with open(output_file) as f:
-                    result_data = json.load(f)
+                    result_data: dict[str, Any] = json.load(f)
                 return result_data
             else:
                 # Try to parse stdout as JSON
                 try:
-                    return json.loads(stdout.decode())
+                    return json.loads(stdout.decode())  # type: ignore[no-any-return]
                 except json.JSONDecodeError as e:
                     raise BackendError(
                         "Failed to parse LM Evaluation Harness output as JSON"
@@ -641,15 +646,17 @@ class LMEvalExecutor(Executor):
             started_at=context.started_at,
             completed_at=utcnow(),
             duration_seconds=safe_duration_seconds(utcnow(), context.started_at),
+            error_message=None,
+            mlflow_run_id=None,
         )
 
     def get_recommended_timeout_minutes(self) -> int:
         """Get the recommended timeout for LM Evaluation Harness."""
-        return self.timeout_seconds // 60
+        return self.timeout_seconds // 60  # type: ignore[no-any-return]
 
     def get_max_retry_attempts(self) -> int:
         """Get the maximum retry attempts for LM Evaluation Harness."""
-        return self.backend_config.get("max_retries", 2)
+        return self.backend_config.get("max_retries", 2)  # type: ignore[no-any-return]
 
     async def _wait_for_cr_completion_and_get_results(
         self,
@@ -738,11 +745,7 @@ class LMEvalExecutor(Executor):
                         started_at=context.started_at,
                         completed_at=utcnow(),
                         duration_seconds=elapsed,
-                        metadata={
-                            "cr_name": cr_name,
-                            "namespace": namespace,
-                            "reason": reason,
-                        },
+                        mlflow_run_id=None,
                     )
 
             # Wait before next poll
@@ -806,16 +809,24 @@ class LMEvalExecutor(Executor):
             "namespace": cr["metadata"]["namespace"],
         }
 
-        return EvaluationResult(
+        # Convert metrics to proper type
+        metrics_typed: dict[str, float | int | str] = {}
+        for key, value in metrics.items():
+            if isinstance(key, str):
+                metrics_typed[key] = value
+
+        return EvaluationResult(  # type: ignore[call-arg]
             evaluation_id=context.evaluation_id,
             backend_name="lm-evaluation-harness",
             benchmark_name=context.benchmark_spec.name,
             status=EvaluationStatus.COMPLETED,
-            metrics=metrics,
+            metrics=metrics_typed,
             artifacts=artifacts,
             started_at=context.started_at,
             completed_at=completed_at or utcnow(),
             duration_seconds=duration_seconds,
+            error_message=None,
+            mlflow_run_id=None,
             metadata={
                 "cr_name": cr["metadata"]["name"],
                 "namespace": cr["metadata"]["namespace"],
@@ -852,7 +863,7 @@ class LMEvalExecutor(Executor):
                 plural=plural,
                 name=cr_name,
             )
-            return cr.get("status", {})
+            return cr.get("status", {})  # type: ignore[no-any-return]
         except ApiException as e:
             if e.status == 404:
                 return None
@@ -885,6 +896,6 @@ class LMEvalExecutor(Executor):
 
         results_str = status.get("results", "{}")
         try:
-            return json.loads(results_str)
+            return json.loads(results_str)  # type: ignore[no-any-return]
         except json.JSONDecodeError:
             return None

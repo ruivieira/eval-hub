@@ -110,17 +110,18 @@ class EvaluationSpec(BaseModel):
     @property
     def model_server_id(self) -> str:
         """Get model server ID from nested model object."""
-        return self.model.get("server", "")
+        return str(self.model.get("server", ""))
 
     @property
     def model_name(self) -> str:
         """Get model name from nested model object."""
-        return self.model.get("name", "")
+        return str(self.model.get("name", ""))
 
     @property
     def model_configuration(self) -> dict[str, Any]:
         """Get model configuration from nested model object."""
-        return self.model.get("configuration", {})
+        config = self.model.get("configuration", {})
+        return dict(config) if isinstance(config, dict) else {}
 
     @model_validator(mode="after")
     def validate_model_fields(self) -> "EvaluationSpec":
@@ -157,12 +158,12 @@ class SingleBenchmarkEvaluationRequest(BaseModel):
     @property
     def model_server_id(self) -> str:
         """Get model server ID from nested model object."""
-        return self.model.get("server", "")
+        return str(self.model.get("server", ""))
 
     @property
     def model_name(self) -> str:
         """Get model name from nested model object."""
-        return self.model.get("name", "")
+        return str(self.model.get("name", ""))
 
     @model_validator(mode="after")
     def validate_model_fields(self) -> "SingleBenchmarkEvaluationRequest":

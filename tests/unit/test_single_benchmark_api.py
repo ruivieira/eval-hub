@@ -4,8 +4,6 @@ from unittest.mock import Mock
 from uuid import uuid4
 
 import pytest
-from fastapi.testclient import TestClient
-
 from eval_hub.api.app import create_app
 from eval_hub.models.provider import (
     Benchmark,
@@ -14,6 +12,7 @@ from eval_hub.models.provider import (
     ProviderType,
 )
 from eval_hub.services.provider_service import ProviderService
+from fastapi.testclient import TestClient
 
 
 @pytest.fixture
@@ -81,25 +80,34 @@ def client_with_mock_provider(mock_provider_service):
     def override_provider_service():
         return mock_provider_service
 
-    def override_parser():
+    async def override_parser():
+        from unittest.mock import AsyncMock
+
         parser = Mock()
-        parser.parse_evaluation_request = Mock(return_value=Mock())
+        parser.parse_evaluation_request = AsyncMock(return_value=Mock())
         return parser
 
-    def override_executor():
+    async def override_executor():
+        from unittest.mock import AsyncMock
+
         executor = Mock()
-        executor.execute_evaluation_request = Mock(return_value=[])
+        executor.execute_evaluation_request = AsyncMock(return_value=[])
         return executor
 
-    def override_mlflow_client():
+    async def override_mlflow_client():
+        from unittest.mock import AsyncMock
+
         client = Mock()
-        client.create_experiment = Mock(return_value="exp-123")
-        client.get_experiment_url = Mock(return_value="http://mlflow:5000/exp/123")
+        client.create_experiment = AsyncMock(return_value="exp-123")
+        client.get_experiment_url = AsyncMock(return_value="http://mlflow:5000/exp/123")
         return client
 
-    def override_response_builder():
+    async def override_response_builder():
+        from datetime import datetime
+        from unittest.mock import AsyncMock
+
         builder = Mock()
-        builder.build_response = Mock(
+        builder.build_response = AsyncMock(
             return_value=Mock(
                 request_id=uuid4(),
                 status="pending",
@@ -109,8 +117,8 @@ def client_with_mock_provider(mock_provider_service):
                 results=[],
                 aggregated_metrics={},
                 experiment_url="http://mlflow:5000/exp/123",
-                created_at=None,
-                updated_at=None,
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow(),
                 estimated_completion=None,
                 progress_percentage=0.0,
             )

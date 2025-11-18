@@ -69,7 +69,8 @@ class ModelService:
         if model_server_url:
             model_server_url = model_server_url.strip()
             if model_server_url:
-                server_id = os.getenv("MODEL_SERVER_ID", "default")
+                server_id_env = os.getenv("MODEL_SERVER_ID", "default")
+                server_id = server_id_env if server_id_env else "default"
                 model_type_str = os.getenv("MODEL_SERVER_TYPE", "openai-compatible")
                 models_str = os.getenv("MODEL_SERVER_MODELS", "")
 
@@ -96,6 +97,8 @@ class ModelService:
                         ServerModel(
                             model_name=model_name,
                             description=None,
+                            capabilities=None,
+                            config=None,
                             status=ModelStatus.ACTIVE,
                             tags=["runtime"],
                         )
@@ -107,6 +110,7 @@ class ModelService:
                     base_url=model_server_url,
                     api_key_required=True,
                     models=server_models,
+                    server_config=None,
                     status=ModelStatus.ACTIVE,
                     tags=["runtime"],
                     created_at=utcnow(),
@@ -178,6 +182,8 @@ class ModelService:
                         ServerModel(
                             model_name=model_name,
                             description=None,
+                            capabilities=None,
+                            config=None,
                             status=ModelStatus.ACTIVE,
                             tags=["runtime"],
                         )
@@ -190,6 +196,7 @@ class ModelService:
                     base_url=base_url,
                     api_key_required=True,
                     models=server_models,
+                    server_config=None,
                     status=ModelStatus.ACTIVE,
                     tags=["runtime"],
                     created_at=utcnow(),
@@ -234,7 +241,7 @@ class ModelService:
                 # Allow overriding server_id via env var, but default to derived value
                 server_id = os.getenv(id_var, server_id)
                 model_type_str = os.getenv(type_var, "openai-compatible")
-                model_name = os.getenv(name_var)
+                model_name_env = os.getenv(name_var)
                 model_path = os.getenv(path_var)
 
                 try:
@@ -243,8 +250,10 @@ class ModelService:
                     server_type = ModelType.OPENAI_COMPATIBLE
 
                 # Use provided name or default to "Runtime Model <ID>"
-                if not model_name:
+                if not model_name_env:
                     model_name = f"Runtime Model {match.group(1).upper()}"
+                else:
+                    model_name = model_name_env
 
                 # Create server with single model
                 runtime_server = ModelServer(
@@ -256,18 +265,21 @@ class ModelService:
                         ServerModel(
                             model_name=model_name,
                             description=None,
+                            capabilities=None,
+                            config=None,
                             status=ModelStatus.ACTIVE,
                             tags=["runtime"],
                         )
                     ],
+                    server_config=None,
                     status=ModelStatus.ACTIVE,
                     tags=["runtime"],
                     created_at=utcnow(),
                     updated_at=utcnow(),
                 )
 
-                # Store model_path in server metadata for later use
-                runtime_server.model_path = model_path
+                # Store model_path in server metadata for later use (using setattr to bypass type checking)
+                runtime_server.model_path = model_path  # type: ignore[attr-defined]
 
                 runtime_servers[server_id] = runtime_server
                 logger.info(
@@ -305,8 +317,18 @@ class ModelService:
                     base_url=server.base_url,
                     api_key_required=server.api_key_required,
                     model_path=model_path,
-                    capabilities=ModelCapabilities(),
-                    config=ModelConfig(),
+                    capabilities=server_model.capabilities
+                    or ModelCapabilities(max_tokens=None, context_window=None),
+                    config=server_model.config
+                    or ModelConfig(
+                        temperature=None,
+                        max_tokens=None,
+                        top_p=None,
+                        frequency_penalty=None,
+                        presence_penalty=None,
+                        timeout=30,
+                        retry_attempts=3,
+                    ),
                     status=server_model.status,
                     tags=server_model.tags,
                     created_at=server.created_at,
@@ -577,8 +599,18 @@ class ModelService:
             base_url=request.base_url,
             api_key_required=request.api_key_required,
             model_path=request.model_path,
-            capabilities=request.capabilities or ModelCapabilities(),
-            config=request.config or ModelConfig(),
+            capabilities=request.capabilities
+            or ModelCapabilities(max_tokens=None, context_window=None),
+            config=request.config
+            or ModelConfig(
+                temperature=None,
+                max_tokens=None,
+                top_p=None,
+                frequency_penalty=None,
+                presence_penalty=None,
+                timeout=30,
+                retry_attempts=3,
+            ),
             status=request.status,
             tags=request.tags,
             created_at=now,

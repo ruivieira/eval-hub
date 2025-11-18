@@ -6,7 +6,6 @@ from unittest.mock import Mock, patch
 
 import pytest
 import yaml
-
 from eval_hub.models.provider import (
     Benchmark,
     BenchmarkDetail,
@@ -453,7 +452,6 @@ def live_server():
     import threading
 
     import uvicorn
-
     from eval_hub.api.app import create_app
 
     # Find an available port

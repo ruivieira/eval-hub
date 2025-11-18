@@ -170,6 +170,7 @@ class NemoEvaluatorExecutor(Executor):
                 started_at=context.started_at,
                 completed_at=utcnow(),
                 duration_seconds=safe_duration_seconds(utcnow(), context.started_at),
+                mlflow_run_id=None,
             )
 
     async def cleanup(self) -> None:
@@ -206,6 +207,7 @@ class NemoEvaluatorExecutor(Executor):
             model_id=context.model_name,
             type=EndpointType(self.backend_config.get("endpoint_type", "chat")),
             api_key=self.backend_config.get("api_key_env"),
+            stream=self.backend_config.get("stream", False),
         )
 
         # Build configuration parameters
@@ -385,24 +387,28 @@ class NemoEvaluatorExecutor(Executor):
                         metrics[full_metric_name] = score.value
 
         # Add some default artifacts
-        artifacts["nemo_evaluator_response"] = (
-            f"/tmp/nemo_eval_{context.evaluation_id}_{context.benchmark_spec.name}_response.json"
-        )
+        artifacts[
+            "nemo_evaluator_response"
+        ] = f"/tmp/nemo_eval_{context.evaluation_id}_{context.benchmark_spec.name}_response.json"
 
         # Save the full response for debugging
         with open(artifacts["nemo_evaluator_response"], "w") as f:
             json.dump(nemo_result.model_dump(), f, indent=2, default=str)
+
+        metrics_typed: dict[str, float | int | str] = dict(metrics.items())
 
         return EvaluationResult(
             evaluation_id=context.evaluation_id,
             backend_name="nemo-evaluator",
             benchmark_name=context.benchmark_spec.name,
             status=EvaluationStatus.COMPLETED,
-            metrics=metrics,
+            metrics=metrics_typed,
             artifacts=artifacts,
             started_at=context.started_at,
             completed_at=utcnow(),
             duration_seconds=safe_duration_seconds(utcnow(), context.started_at),
+            error_message=None,
+            mlflow_run_id=None,
         )
 
     def _get_headers(self) -> dict[str, str]:

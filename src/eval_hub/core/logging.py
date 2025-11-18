@@ -44,7 +44,7 @@ def setup_logging(settings: Settings) -> None:
 
 def get_logger(name: str = __name__) -> FilteringBoundLogger:
     """Get a structured logger instance."""
-    return structlog.get_logger(name)
+    return structlog.get_logger(name)  # type: ignore[no-any-return]
 
 
 def log_request_start(

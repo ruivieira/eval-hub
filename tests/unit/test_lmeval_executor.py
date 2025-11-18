@@ -5,7 +5,6 @@ from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
-
 from eval_hub.executors.base import ExecutionContext
 from eval_hub.executors.lmeval import LMEvalExecutor
 from eval_hub.models.evaluation import BackendSpec, BackendType, BenchmarkSpec
@@ -36,15 +35,16 @@ def lmeval_executor(backend_config):
 def execution_context():
     """Create an ExecutionContext for testing."""
     evaluation_id = uuid4()
-    backend_spec = BackendSpec(
-        name="test-backend",
-        type=BackendType.LMEVAL,
-        config={},
-    )
     benchmark_spec = BenchmarkSpec(
         name="arc_easy",
         tasks=["arc_easy"],
         config={},
+    )
+    backend_spec = BackendSpec(
+        name="test-backend",
+        type=BackendType.LMEVAL,
+        config={},
+        benchmarks=[benchmark_spec],
     )
     return ExecutionContext(
         evaluation_id=evaluation_id,

@@ -4,8 +4,6 @@ from datetime import datetime
 from unittest.mock import Mock, patch
 
 import pytest
-from fastapi.testclient import TestClient
-
 from eval_hub.api.app import create_app
 from eval_hub.models.model import (
     ListModelsResponse,
@@ -16,6 +14,7 @@ from eval_hub.models.model import (
     ModelSummary,
     ModelType,
 )
+from fastapi.testclient import TestClient
 
 
 @pytest.fixture

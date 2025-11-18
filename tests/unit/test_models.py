@@ -4,7 +4,6 @@ from datetime import datetime
 from uuid import uuid4
 
 import pytest
-
 from eval_hub.models.evaluation import (
     BackendSpec,
     BackendType,
@@ -68,7 +67,7 @@ class TestEvaluationModels:
 
         eval_spec = EvaluationSpec(
             name="Test Evaluation",
-            model_name="test-model",
+            model={"server": "test-server", "name": "test-model"},
             backends=[backend],
             risk_category=RiskCategory.MEDIUM,
             priority=1,
@@ -78,6 +77,7 @@ class TestEvaluationModels:
 
         assert eval_spec.name == "Test Evaluation"
         assert eval_spec.model_name == "test-model"
+        assert eval_spec.model_server_id == "test-server"
         assert len(eval_spec.backends) == 1
         assert eval_spec.risk_category == RiskCategory.MEDIUM
         assert eval_spec.priority == 1
@@ -92,7 +92,9 @@ class TestEvaluationModels:
             name="test-backend", type=BackendType.CUSTOM, benchmarks=[benchmark]
         )
         eval_spec = EvaluationSpec(
-            name="Test Evaluation", model_name="test-model", backends=[backend]
+            name="Test Evaluation",
+            model={"server": "test-server", "name": "test-model"},
+            backends=[backend],
         )
 
         request = EvaluationRequest(
@@ -187,7 +189,11 @@ class TestEvaluationModels:
         assert benchmark.device is None
         assert benchmark.config == {}
 
-        eval_spec = EvaluationSpec(name="Test", model_name="test-model", backends=[])
+        eval_spec = EvaluationSpec(
+            name="Test",
+            model={"server": "test-server", "name": "test-model"},
+            backends=[],
+        )
         assert eval_spec.risk_category is None
         assert eval_spec.priority == 0
         assert eval_spec.timeout_minutes == 60
@@ -341,7 +347,6 @@ class TestModelDataStructures:
     def test_model_validation_model_id(self):
         """Test Model validation for model_id."""
         import pytest
-
         from eval_hub.models.model import Model, ModelType
 
         # Test empty model_id
@@ -367,7 +372,6 @@ class TestModelDataStructures:
     def test_model_validation_base_url(self):
         """Test Model validation for base_url."""
         import pytest
-
         from eval_hub.models.model import Model, ModelType
 
         # Test invalid base_url
@@ -502,7 +506,6 @@ class TestModelDataStructures:
     def test_model_config_validation_ranges(self):
         """Test ModelConfig validation for parameter ranges."""
         import pytest
-
         from eval_hub.models.model import ModelConfig
 
         # Test valid values

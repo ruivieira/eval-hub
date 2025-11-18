@@ -5,7 +5,6 @@ from datetime import datetime
 from unittest.mock import patch
 
 import pytest
-
 from eval_hub.models.model import (
     ListModelsResponse,
     ModelCapabilities,

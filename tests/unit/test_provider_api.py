@@ -3,8 +3,6 @@
 from unittest.mock import Mock, patch
 
 import pytest
-from fastapi.testclient import TestClient
-
 from eval_hub.api.app import create_app
 from eval_hub.models.provider import (
     Benchmark,
@@ -18,6 +16,7 @@ from eval_hub.models.provider import (
     ProviderType,
 )
 from eval_hub.services.provider_service import ProviderService
+from fastapi.testclient import TestClient
 
 
 @pytest.fixture
@@ -214,7 +213,7 @@ def client_with_mock_provider(mock_provider_service):
 
     app.dependency_overrides[get_provider_service] = override_provider_service
 
-    return TestClient(app), mock_provider_service
+    return TestClient(app, raise_server_exceptions=False), mock_provider_service
 
 
 class TestProviderAPI:

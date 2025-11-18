@@ -7,7 +7,6 @@ from unittest.mock import patch
 
 import pytest
 import yaml
-
 from eval_hub.models.provider import (
     Benchmark,
     BenchmarkDetail,

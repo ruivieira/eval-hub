@@ -87,7 +87,7 @@ class ResponseBuilder:
         self, results: list[EvaluationResult]
     ) -> dict[EvaluationStatus, int]:
         """Count results by their status."""
-        counts = {}
+        counts: dict[EvaluationStatus, int] = {}
         for result in results:
             status = result.status
             counts[status] = counts.get(status, 0) + 1
@@ -162,11 +162,11 @@ class ResponseBuilder:
         )
 
         # Collect all metric names
-        all_metric_names = set()
+        all_metric_names: set[str] = set()
         for result in completed_results:
             all_metric_names.update(result.metrics.keys())
 
-        aggregated = {}
+        aggregated: dict[str, float | int | str] = {}
 
         # Aggregate each metric
         for metric_name in all_metric_names:
@@ -206,8 +206,8 @@ class ResponseBuilder:
             aggregated["total_duration_seconds"] = sum(durations)
 
         # Backend and benchmark statistics
-        backend_counts = {}
-        benchmark_counts = {}
+        backend_counts: dict[str, int] = {}
+        benchmark_counts: dict[str, int] = {}
         for result in completed_results:
             backend_counts[result.backend_name] = (
                 backend_counts.get(result.backend_name, 0) + 1
@@ -218,13 +218,21 @@ class ResponseBuilder:
 
         aggregated["backends_used"] = len(backend_counts)
         aggregated["benchmarks_used"] = len(benchmark_counts)
-        aggregated["most_used_backend"] = (
-            max(backend_counts, key=backend_counts.get) if backend_counts else None
+        most_used_backend: str | None = (
+            max(backend_counts, key=lambda x: backend_counts[x])
+            if backend_counts
+            else None
         )
-        aggregated["most_used_benchmark"] = (
-            max(benchmark_counts, key=benchmark_counts.get)
+        aggregated["most_used_backend"] = (
+            most_used_backend if most_used_backend else "none"
+        )
+        most_used_benchmark: str | None = (
+            max(benchmark_counts, key=lambda x: benchmark_counts[x])
             if benchmark_counts
             else None
+        )
+        aggregated["most_used_benchmark"] = (
+            most_used_benchmark if most_used_benchmark else "none"
         )
 
         return aggregated
@@ -250,12 +258,19 @@ class ResponseBuilder:
         ]
 
         if completed_results:
-            avg_duration = statistics.mean(
-                [r.duration_seconds for r in completed_results]
+            durations_for_estimate = [
+                r.duration_seconds
+                for r in completed_results
+                if r.duration_seconds is not None
+            ]
+            avg_duration = (
+                statistics.mean(durations_for_estimate)
+                if durations_for_estimate
+                else 300.0
             )
         else:
             # Use default estimation
-            avg_duration = 300  # 5 minutes default
+            avg_duration = 300.0  # 5 minutes default
 
         # Estimate remaining time
         remaining_count = len(running_results) + len(pending_results)
@@ -287,7 +302,12 @@ class ResponseBuilder:
         insights = []
 
         # Success rate insight
-        success_rate = aggregated_metrics.get("success_rate", 0.0)
+        success_rate_val = aggregated_metrics.get("success_rate", 0.0)
+        success_rate = (
+            float(success_rate_val)
+            if isinstance(success_rate_val, int | float)
+            else 0.0
+        )
         if success_rate >= 0.9:
             insights.append(
                 "Excellent success rate - all evaluations completed successfully"
@@ -303,7 +323,12 @@ class ResponseBuilder:
 
         # Performance insights
         if "avg_duration_seconds" in aggregated_metrics:
-            avg_duration = aggregated_metrics["avg_duration_seconds"]
+            avg_duration_val = aggregated_metrics["avg_duration_seconds"]
+            avg_duration = (
+                float(avg_duration_val)
+                if isinstance(avg_duration_val, int | float)
+                else 0.0
+            )
             if avg_duration < 60:
                 insights.append("Fast evaluation execution - under 1 minute average")
             elif avg_duration < 300:
@@ -314,10 +339,12 @@ class ResponseBuilder:
                 )
 
         # Backend insights
-        if aggregated_metrics.get("backends_used", 0) > 1:
-            insights.append(
-                f"Multi-backend evaluation across {aggregated_metrics['backends_used']} backends"
-            )
+        backends_used_val = aggregated_metrics.get("backends_used", 0)
+        backends_used = (
+            int(backends_used_val) if isinstance(backends_used_val, int | float) else 0
+        )
+        if backends_used > 1:
+            insights.append(f"Multi-backend evaluation across {backends_used} backends")
 
         return {
             "request_id": str(request.request_id),

@@ -73,9 +73,11 @@ class EvaluationExecutor:
                     error_message=str(result),
                     started_at=utcnow(),
                     completed_at=utcnow(),
+                    duration_seconds=0.0,
+                    mlflow_run_id=None,
                 )
                 all_results.append(error_result)
-            else:
+            elif isinstance(result, list):
                 all_results.extend(result)
 
         self.logger.info(
@@ -131,9 +133,11 @@ class EvaluationExecutor:
                         error_message=str(backend_result),
                         started_at=utcnow(),
                         completed_at=utcnow(),
+                        duration_seconds=0.0,
+                        mlflow_run_id=None,
                     )
                     results.append(error_result)
-                else:
+                elif isinstance(backend_result, list):
                     results.extend(backend_result)
 
             # Determine overall status
@@ -163,6 +167,8 @@ class EvaluationExecutor:
                 error_message=str(e),
                 started_at=utcnow(),
                 completed_at=utcnow(),
+                duration_seconds=0.0,
+                mlflow_run_id=None,
             )
             results = [error_result]
 
@@ -253,6 +259,8 @@ class EvaluationExecutor:
                     error_message=str(e),
                     started_at=utcnow(),
                     completed_at=utcnow(),
+                    duration_seconds=0.0,
+                    mlflow_run_id=None,
                 )
                 results.append(error_result)
         else:
@@ -280,6 +288,8 @@ class EvaluationExecutor:
                         error_message=str(e),
                         started_at=utcnow(),
                         completed_at=utcnow(),
+                        duration_seconds=0.0,
+                        mlflow_run_id=None,
                     )
                     results.append(error_result)
 
@@ -305,7 +315,7 @@ class EvaluationExecutor:
                     f"Model service is not available, cannot resolve server for evaluation {evaluation.id}"
                 )
 
-            model_server_base_url = None
+            model_server_base_url: str | None = None
             server_model = self.model_service.get_model_on_server(
                 evaluation.model_server_id, evaluation.model_name
             )
@@ -320,9 +330,11 @@ class EvaluationExecutor:
                 )
             else:
                 # Try to get server even if model not found
-                server = self.model_service.get_server_by_id(evaluation.model_server_id)
-                if server:
-                    model_server_base_url = server.base_url
+                server_result = self.model_service.get_server_by_id(
+                    evaluation.model_server_id
+                )
+                if server_result:
+                    model_server_base_url = server_result.base_url
                     self.logger.warning(
                         "Model not found on server, but using server base_url",
                         server_id=evaluation.model_server_id,
@@ -400,6 +412,8 @@ class EvaluationExecutor:
                 error_message=f"Failed after {context.retry_attempts + 1} attempts: {last_error}",
                 started_at=context.started_at,
                 completed_at=utcnow(),
+                duration_seconds=safe_duration_seconds(utcnow(), context.started_at),
+                mlflow_run_id=None,
             )
 
     async def _execute_benchmark_with_timeout(
@@ -491,6 +505,7 @@ class EvaluationExecutor:
                     duration_seconds=safe_duration_seconds(
                         utcnow(), context.started_at
                     ),
+                    mlflow_run_id=None,
                 )
 
         # Fall back to legacy implementations for unsupported backends
@@ -545,7 +560,7 @@ class EvaluationExecutor:
                 )
 
         # Simulate results
-        metrics = {
+        metrics: dict[str, float | int | str] = {
             "accuracy": 0.85 + (hash(str(context.evaluation_id)) % 100) / 1000,
             "perplexity": 2.3 + (hash(str(context.evaluation_id)) % 50) / 100,
             "bleu_score": 0.75 + (hash(str(context.evaluation_id)) % 25) / 1000,
@@ -563,6 +578,8 @@ class EvaluationExecutor:
             started_at=context.started_at,
             completed_at=utcnow(),
             duration_seconds=safe_duration_seconds(utcnow(), context.started_at),
+            error_message=None,
+            mlflow_run_id=None,
         )
 
     async def _execute_guidellm(
@@ -584,7 +601,7 @@ class EvaluationExecutor:
                 )
 
         # Simulate results
-        metrics = {
+        metrics: dict[str, float | int | str] = {
             "throughput_tokens_per_second": 150
             + (hash(str(context.evaluation_id)) % 50),
             "latency_p50_ms": 45 + (hash(str(context.evaluation_id)) % 20),
@@ -604,6 +621,8 @@ class EvaluationExecutor:
             started_at=context.started_at,
             completed_at=utcnow(),
             duration_seconds=safe_duration_seconds(utcnow(), context.started_at),
+            error_message=None,
+            mlflow_run_id=None,
         )
 
     async def _execute_custom_backend(
@@ -626,7 +645,7 @@ class EvaluationExecutor:
         # Simulate custom backend execution
         await asyncio.sleep(15)
 
-        metrics = {
+        metrics: dict[str, float | int | str] = {
             "custom_metric_1": 0.9,
             "custom_metric_2": 1.2,
         }
@@ -643,6 +662,8 @@ class EvaluationExecutor:
             started_at=context.started_at,
             completed_at=utcnow(),
             duration_seconds=safe_duration_seconds(utcnow(), context.started_at),
+            error_message=None,
+            mlflow_run_id=None,
         )
 
     async def get_active_evaluations(self) -> list[TaskInfo]:

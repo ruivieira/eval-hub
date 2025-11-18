@@ -3,10 +3,9 @@
 from unittest.mock import patch
 
 import pytest
-from fastapi.testclient import TestClient
-
 from eval_hub.api.app import create_app
 from eval_hub.core.config import Settings
+from fastapi.testclient import TestClient
 
 
 @pytest.fixture
@@ -58,7 +57,7 @@ class TestAPIEndpoints:
             "evaluations": [
                 {
                     "name": "Test Evaluation",
-                    "model_name": "test-model",
+                    "model": {"server": "test-server", "name": "test-model"},
                     "risk_category": "low",
                 }
             ]
@@ -88,7 +87,7 @@ class TestAPIEndpoints:
             "evaluations": [
                 {
                     "name": "Explicit Backend Test",
-                    "model_name": "test-model",
+                    "model": {"server": "test-server", "name": "test-model"},
                     "backends": [
                         {
                             "name": "lm-evaluation-harness",
@@ -129,7 +128,10 @@ class TestAPIEndpoints:
             "evaluations": [
                 {
                     "name": "Invalid Test",
-                    "model_name": "",  # Empty model name should fail validation
+                    "model": {
+                        "server": "test-server",
+                        "name": "",
+                    },  # Empty model name should fail validation
                     "risk_category": "low",
                 }
             ]
@@ -139,8 +141,8 @@ class TestAPIEndpoints:
 
         assert response.status_code == 400
         data = response.json()
-        assert "error" in data
-        assert "validation" in data["error"].lower()
+        assert "detail" in data
+        assert "validation" in data["detail"].lower()
 
     def test_get_evaluation_status_not_found(self, client):
         """Test getting status for non-existent evaluation."""
@@ -154,6 +156,11 @@ class TestAPIEndpoints:
 
     def test_list_evaluations_empty(self, client):
         """Test listing evaluations when none exist."""
+        # Clear any evaluations from previous tests
+        from eval_hub.api.routes import active_evaluations
+
+        active_evaluations.clear()
+
         response = client.get("/api/v1/evaluations")
 
         assert response.status_code == 200
@@ -235,7 +242,7 @@ class TestAPIEndpoints:
             "evaluations": [
                 {
                     "name": "Sync Test",
-                    "model_name": "test-model",
+                    "model": {"server": "test-server", "name": "test-model"},
                     "risk_category": "low",
                 }
             ]
