@@ -83,7 +83,7 @@ def create_app() -> FastAPI:
 
     # Add request logging middleware
     @app.middleware("http")
-    async def logging_middleware(request: Request, call_next):
+    async def logging_middleware(request: Request, call_next) -> Response:  # type: ignore[no-untyped-def]
         """Middleware for request logging and metrics."""
         start_time = time.time()
         request_id = request.headers.get("X-Request-ID", "unknown")
@@ -92,7 +92,7 @@ def create_app() -> FastAPI:
         log_request_start(logger, request_id, str(request.url.path), request.method)
 
         # Process request
-        response = await call_next(request)
+        response: Response = await call_next(request)
 
         # Calculate duration
         duration = time.time() - start_time
@@ -116,7 +116,9 @@ def create_app() -> FastAPI:
 
     # Add exception handlers
     @app.exception_handler(ValidationError)
-    async def validation_error_handler(request: Request, exc: ValidationError):
+    async def validation_error_handler(
+        request: Request, exc: ValidationError
+    ) -> JSONResponse:
         """Handle validation errors."""
         logger.warning(
             "Validation error",
@@ -135,7 +137,9 @@ def create_app() -> FastAPI:
         )
 
     @app.exception_handler(ExecutionError)
-    async def execution_error_handler(request: Request, exc: ExecutionError):
+    async def execution_error_handler(
+        request: Request, exc: ExecutionError
+    ) -> JSONResponse:
         """Handle execution errors."""
         logger.error(
             "Execution error",
@@ -156,7 +160,7 @@ def create_app() -> FastAPI:
     @app.exception_handler(EvaluationServiceError)
     async def evaluation_service_error_handler(
         request: Request, exc: EvaluationServiceError
-    ):
+    ) -> JSONResponse:
         """Handle general evaluation service errors."""
         logger.error(
             "Service error",
@@ -175,7 +179,9 @@ def create_app() -> FastAPI:
         )
 
     @app.exception_handler(Exception)
-    async def general_exception_handler(request: Request, exc: Exception):
+    async def general_exception_handler(
+        request: Request, exc: Exception
+    ) -> JSONResponse:
         """Handle unexpected exceptions."""
         logger.error(
             "Unexpected error",
@@ -194,7 +200,7 @@ def create_app() -> FastAPI:
 
     # Add metrics endpoint
     @app.get("/metrics")
-    async def metrics():
+    async def metrics() -> Response:
         """Prometheus metrics endpoint."""
         return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 

@@ -1,7 +1,6 @@
 """Unit tests for request parser service."""
 
 import pytest
-
 from eval_hub.core.config import Settings
 from eval_hub.core.exceptions import ValidationError
 from eval_hub.models.evaluation import (
@@ -90,7 +89,9 @@ class TestRequestParser:
             benchmarks=[benchmark],
         )
         eval_spec = EvaluationSpec(
-            name="Test Evaluation", model_name="test-model", backends=[backend]
+            name="Test Evaluation",
+            model={"server": "test-server", "name": "test-model"},
+            backends=[backend],
         )
         request = EvaluationRequest(evaluations=[eval_spec])
 
@@ -107,7 +108,7 @@ class TestRequestParser:
         """Test parsing a request with risk category."""
         eval_spec = EvaluationSpec(
             name="Risk Category Test",
-            model_name="test-model",
+            model={"server": "test-server", "name": "test-model"},
             risk_category=RiskCategory.MEDIUM,
         )
         request = EvaluationRequest(evaluations=[eval_spec])
@@ -142,7 +143,7 @@ class TestRequestParser:
         """Test parsing a request with low risk category."""
         eval_spec = EvaluationSpec(
             name="Low Risk Test",
-            model_name="test-model",
+            model={"server": "test-server", "name": "test-model"},
             risk_category=RiskCategory.LOW,
         )
         request = EvaluationRequest(evaluations=[eval_spec])
@@ -164,7 +165,7 @@ class TestRequestParser:
         """Test parsing a request with critical risk category."""
         eval_spec = EvaluationSpec(
             name="Critical Risk Test",
-            model_name="test-model",
+            model={"server": "test-server", "name": "test-model"},
             risk_category=RiskCategory.CRITICAL,
         )
         request = EvaluationRequest(evaluations=[eval_spec])
@@ -205,7 +206,7 @@ class TestRequestParser:
         for i in range(101):  # More than the limit of 100
             eval_spec = EvaluationSpec(
                 name=f"Test {i}",
-                model_name="test-model",
+                model={"server": "test-server", "name": "test-model"},
                 risk_category=RiskCategory.LOW,
             )
             evaluations.append(eval_spec)
@@ -222,7 +223,7 @@ class TestRequestParser:
         """Test validation fails for missing model name."""
         eval_spec = EvaluationSpec(
             name="Test",
-            model_name="",  # Empty model name
+            model={"server": "test-server", "name": ""},  # Empty model name
             risk_category=RiskCategory.LOW,
         )
         request = EvaluationRequest(evaluations=[eval_spec])
@@ -237,7 +238,7 @@ class TestRequestParser:
         """Test validation fails when neither backends nor risk category specified."""
         eval_spec = EvaluationSpec(
             name="Test",
-            model_name="test-model",
+            model={"server": "test-server", "name": "test-model"},
             # No backends or risk_category
         )
         request = EvaluationRequest(evaluations=[eval_spec])
@@ -245,14 +246,14 @@ class TestRequestParser:
         with pytest.raises(ValidationError) as exc_info:
             await parser.parse_evaluation_request(request)
 
-        assert "must specify either backends or risk_category" in str(exc_info.value)
+        assert "must specify one of" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_validation_negative_timeout(self, parser):
         """Test validation fails for negative timeout."""
         eval_spec = EvaluationSpec(
             name="Test",
-            model_name="test-model",
+            model={"server": "test-server", "name": "test-model"},
             risk_category=RiskCategory.LOW,
             timeout_minutes=-1,
         )
@@ -268,7 +269,7 @@ class TestRequestParser:
         """Test validation fails for negative retry attempts."""
         eval_spec = EvaluationSpec(
             name="Test",
-            model_name="test-model",
+            model={"server": "test-server", "name": "test-model"},
             risk_category=RiskCategory.LOW,
             retry_attempts=-1,
         )
@@ -289,7 +290,9 @@ class TestRequestParser:
             benchmarks=[benchmark],  # Empty name
         )
         eval_spec = EvaluationSpec(
-            name="Test", model_name="test-model", backends=[backend]
+            name="Test",
+            model={"server": "test-server", "name": "test-model"},
+            backends=[backend],
         )
         request = EvaluationRequest(evaluations=[eval_spec])
 
@@ -307,7 +310,9 @@ class TestRequestParser:
             benchmarks=[],  # Empty benchmarks
         )
         eval_spec = EvaluationSpec(
-            name="Test", model_name="test-model", backends=[backend]
+            name="Test",
+            model={"server": "test-server", "name": "test-model"},
+            backends=[backend],
         )
         request = EvaluationRequest(evaluations=[eval_spec])
 
@@ -326,7 +331,9 @@ class TestRequestParser:
             benchmarks=[benchmark],
         )
         eval_spec = EvaluationSpec(
-            name="Test", model_name="test-model", backends=[backend]
+            name="Test",
+            model={"server": "test-server", "name": "test-model"},
+            backends=[backend],
         )
         request = EvaluationRequest(evaluations=[eval_spec])
 
@@ -360,7 +367,9 @@ class TestRequestParser:
         )
 
         eval_spec = EvaluationSpec(
-            name="Test", model_name="test-model", backends=[backend1, backend2]
+            name="Test",
+            model={"server": "test-server", "name": "test-model"},
+            backends=[backend1, backend2],
         )
         request = EvaluationRequest(evaluations=[eval_spec])
 
@@ -374,7 +383,9 @@ class TestRequestParser:
             name="test-backend", type=BackendType.CUSTOM, benchmarks=[benchmark]
         )
         eval_spec = EvaluationSpec(
-            name="Test", model_name="test-model", backends=[backend]
+            name="Test",
+            model={"server": "test-server", "name": "test-model"},
+            backends=[backend],
         )
         request = EvaluationRequest(evaluations=[eval_spec])
 

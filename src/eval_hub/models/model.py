@@ -88,10 +88,20 @@ class Model(BaseModel):
         None, description="Model path or identifier within the service"
     )
     capabilities: ModelCapabilities = Field(
-        default_factory=ModelCapabilities, description="Model capabilities"
+        default_factory=lambda: ModelCapabilities(max_tokens=None, context_window=None),
+        description="Model capabilities",
     )
     config: ModelConfig = Field(
-        default_factory=ModelConfig, description="Default model configuration"
+        default_factory=lambda: ModelConfig(
+            temperature=None,
+            max_tokens=None,
+            top_p=None,
+            frequency_penalty=None,
+            presence_penalty=None,
+            timeout=30,
+            retry_attempts=3,
+        ),
+        description="Default model configuration",
     )
     status: ModelStatus = Field(default=ModelStatus.ACTIVE, description="Model status")
     tags: list[str] = Field(default_factory=list, description="Tags for categorization")

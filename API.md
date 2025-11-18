@@ -2,10 +2,10 @@
 
 ### High-Level Summary
 
-The Thin API Router proposal creates a custom-built microservice focused solely on evaluation orchestration with minimal dependencies and maximum flexibility. This approach prioritizes lightweight operation and complete control over the orchestration logic. It offers optimal performance and customization at the cost of increased development effort.  
+The Thin API Router proposal creates a custom-built microservice focused solely on evaluation orchestration with minimal dependencies and maximum flexibility. This approach prioritizes lightweight operation and complete control over the orchestration logic. It offers optimal performance and customization at the cost of increased development effort.
 The Router/Orch layer **will not** provide any evaluation/benchmark runtime capabilities, its sole purpose is to translate requests into backend executions and storage.
 
-**Key Benefits**: Minimal footprint, maximum flexibility, full API/design control  
+**Key Benefits**: Minimal footprint, maximum flexibility, full API/design control
 **Key Challenges**: Higher development effort, manual ecosystem integration, feature scope responsibility
 
 ### Architecture Overview
@@ -16,26 +16,26 @@ This solution implements a dedicated Kubernetes-native control plane for evaluat
 
 ##### 1\. Core API Service
 
-- **Lightweight Router**: FastAPI-based service with minimal dependencies  
-- **Request Processor**: Schema validation and backend capability matching  
+- **Lightweight Router**: FastAPI-based service with minimal dependencies
+- **Request Processor**: Schema validation and backend capability matching
 - **Communication Layer**: Protocol adapters for different backend types (HTTP, gRPC, message queue)
 
 ##### 2\. Kubernetes-Native Control Plane
 
-- **Operator-Based Management**: Dedicated controller, deployed as Kubernetes Operator managed by TrustyAI team  
-- **Unified Orchestration Layer**: Custom-built platform for managing multiple evaluation frameworks  
+- **Operator-Based Management**: Dedicated controller, deployed as Kubernetes Operator managed by TrustyAI team
+- **Unified Orchestration Layer**: Custom-built platform for managing multiple evaluation frameworks
 - **Framework Discovery Service**: Lists all available evaluation capabilities
 
 ##### 3\. Framework Management & Extensibility
 
-- **Built-in Framework Support**: Out-of-the-box support for LMEval, RAGAS, Garak and GuideLLM  
-- **Bring Your Own Framework (BYOF)**: Container images with standardized interfaces  
+- **Built-in Framework Support**: Out-of-the-box support for LMEval, RAGAS, Garak and GuideLLM
+- **Bring Your Own Framework (BYOF)**: Container images with standardized interfaces
 - **Framework Registry**: Centralized catalog of available evaluation frameworks
 
 ##### 4\. Enterprise MLOps Integration
 
-- **MLOps Traceability**: Full evaluation traces persisted in OCI-backed storage  
-- **Model Governance**: Automatic surfacing of evaluation metrics in Model Registry UI  
+- **MLOps Traceability**: Full evaluation traces persisted in OCI-backed storage
+- **Model Governance**: Automatic surfacing of evaluation metrics in Model Registry UI
 - **Industry-Specific Collections**: Curated evaluation collections for healthcare, legal, finance domains
 
 ### Comprehensive API Analysis
@@ -44,10 +44,10 @@ The eval-hub implements a comprehensive REST API with versioned endpoints (`/api
 
 #### API Base Configuration
 
-- **Base URL**: `http://localhost:8000/api/v1/`  
-- **API Version**: v1  
-- **Content-Type**: `application/json`  
-- **Authentication**: Bearer token (configurable)  
+- **Base URL**: `http://localhost:8000/api/v1/`
+- **API Version**: v1
+- **Content-Type**: `application/json`
+- **Authentication**: Bearer token (configurable)
 - **OpenAPI Spec**: Available at `/docs` (Swagger UI) and `/openapi.json`
 
 ---
@@ -90,8 +90,8 @@ curl -X GET "{{baseUrl}}/health"
 
 #### **POST** `/evaluations` \- Create Evaluation Request
 
-**Purpose**: Submit evaluation jobs for execution across multiple backends and providers   
-**Response Model**: `EvaluationResponse`   
+**Purpose**: Submit evaluation jobs for execution across multiple backends and providers
+**Response Model**: `EvaluationResponse`
 **Status Code**: `202 ACCEPTED` (async) | `200 OK` (sync)
 
 **Multiple Benchmarks with Same Provider:**
@@ -286,30 +286,30 @@ curl -X POST "{{baseUrl}}/evaluations?async_mode=true" \
 
 The evaluation request uses a clean, flat structure for maximum simplicity and consistency:
 
-- **Single Model Configuration**: One model applies to all benchmarks in the request  
-- **Flat Benchmark Array**: Direct list of benchmarks without nested groupings  
-- **Simple benchmark specification**: Each benchmark directly references `benchmark_id` \+ `provider_id`  
-- **Provider-specific parameters**: All provider-specific config goes in the benchmark's `config` object  
+- **Single Model Configuration**: One model applies to all benchmarks in the request
+- **Flat Benchmark Array**: Direct list of benchmarks without nested groupings
+- **Simple benchmark specification**: Each benchmark directly references `benchmark_id` \+ `provider_id`
+- **Provider-specific parameters**: All provider-specific config goes in the benchmark's `config` object
 - **Minimal nesting**: Just model \+ benchmarks array \+ metadata
 
 **Key Features:**
 
-- **Single Model Evaluation**: One model configuration applies to all benchmarks in the request  
-- **Direct provider mapping**: `"provider_id": "lm_evaluation_harness"` directly maps to available providers  
-- **Mixed Provider Support**: Since `provider_id` is specified per benchmark, requests can mix providers freely  
-- **Flat Structure**: No artificial grouping layers \- just specify what benchmarks to run  
-- **Provider-specific config**: Each benchmark config contains only parameters relevant to that provider  
-- **Simple Construction**: Clients build a straightforward list of benchmarks to execute  
-- **Batching**: API automatically groups compatible benchmarks  
-- **Async/sync modes**: Default async returns immediately with tracking IDs, sync blocks until completion  
+- **Single Model Evaluation**: One model configuration applies to all benchmarks in the request
+- **Direct provider mapping**: `"provider_id": "lm_evaluation_harness"` directly maps to available providers
+- **Mixed Provider Support**: Since `provider_id` is specified per benchmark, requests can mix providers freely
+- **Flat Structure**: No artificial grouping layers \- just specify what benchmarks to run
+- **Provider-specific config**: Each benchmark config contains only parameters relevant to that provider
+- **Simple Construction**: Clients build a straightforward list of benchmarks to execute
+- **Batching**: API automatically groups compatible benchmarks
+- **Async/sync modes**: Default async returns immediately with tracking IDs, sync blocks until completion
 - **MLFlow integration**: Automatic experiment tracking and result persistence
 
 **Design Rationale:** This flat structure eliminates unnecessary complexity. Since each benchmark specifies its `provider_id`, there's no need for grouping at the request level. The API handles provider optimization internally, while clients enjoy a simple "run these benchmarks on this model" interface. For organization needs, use collections for pre-curated sets or tags for custom grouping.
 
 #### **POST** `/evaluations/benchmarks/{provider_id}/{benchmark_id}` \- Single Benchmark Evaluation
 
-**Purpose**: Run evaluation on a single benchmark (Llama Stack compatible API)   
-**Response Model**: `EvaluationResponse`   
+**Purpose**: Run evaluation on a single benchmark (Llama Stack compatible API)
+**Response Model**: `EvaluationResponse`
 **Status Code**: `202 ACCEPTED`
 
 ```shell
@@ -698,7 +698,7 @@ curl -X GET "{{baseUrl}}/providers/lm_evaluation_harness/benchmarks/arc_easy"
 
 #### **GET** `/collections` \- List Benchmark Collections
 
-**Purpose**: Discover curated benchmark collections for specific domains   
+**Purpose**: Discover curated benchmark collections for specific domains
 **Response Model**: `ListCollectionsResponse`
 
 ```shell
@@ -1234,9 +1234,9 @@ EvaluationRequest
 
 The simplified structure provides clear configuration patterns:
 
-1. **Model Configuration**: Single model applies to all benchmarks in the request  
-2. **Benchmark Configuration**: Each benchmark has its own provider-specific config  
-3. **Provider Consistency**: All config for a provider goes in the benchmark's `config` object  
+1. **Model Configuration**: Single model applies to all benchmarks in the request
+2. **Benchmark Configuration**: Each benchmark has its own provider-specific config
+3. **Provider Consistency**: All config for a provider goes in the benchmark's `config` object
 4. **Flat Organization**: No artificial grouping \- just a direct list of benchmarks to execute
 
 **Example of Mixed Providers in Single Request:**
@@ -1303,9 +1303,9 @@ The simplified structure provides clear configuration patterns:
 
 The API supports both synchronous and asynchronous execution:
 
-- **Async Mode** (default): Returns immediately with tracking ID, enables parallel processing  
-- **Sync Mode**: Blocks until completion, suitable for simple workflows  
-- **Status Polling**: Regular status checks for async evaluations  
+- **Async Mode** (default): Returns immediately with tracking ID, enables parallel processing
+- **Sync Mode**: Blocks until completion, suitable for simple workflows
+- **Status Polling**: Regular status checks for async evaluations
 - **Callback URLs**: Optional webhook notifications on completion
 
 ### Batch Processing Capabilities
@@ -1340,16 +1340,16 @@ curl -X POST "{{baseUrl}}/evaluations" \
 
 ### MLFlow Integration
 
-- **Experiment Tracking**: Automatic MLFlow experiment creation  
-- **Result Persistence**: Metrics and artifacts stored in MLFlow  
-- **Lineage Tracking**: Full evaluation provenance  
+- **Experiment Tracking**: Automatic MLFlow experiment creation
+- **Result Persistence**: Metrics and artifacts stored in MLFlow
+- **Lineage Tracking**: Full evaluation provenance
 - **Model Registry**: Integration with model governance workflows
 
 ### Error Handling & Validation
 
-- **Request Validation**: Comprehensive Pydantic-based validation  
-- **Provider Validation**: Backend capability verification  
-- **Graceful Degradation**: Partial execution on provider failures  
+- **Request Validation**: Comprehensive Pydantic-based validation
+- **Provider Validation**: Backend capability verification
+- **Graceful Degradation**: Partial execution on provider failures
 - **Detailed Error Messages**: Structured error responses with context
 
 ---
@@ -1358,19 +1358,19 @@ curl -X POST "{{baseUrl}}/evaluations" \
 
 ### Enterprise MLOps Workflow
 
-1. **Model Registration**: Register models via `/models` endpoint  
-2. **Collection Selection**: Choose domain-specific collections  
-3. **Evaluation Submission**: Submit batch evaluations  
-4. **Progress Monitoring**: Poll status endpoints  
-5. **Result Retrieval**: Access results via MLFlow integration  
+1. **Model Registration**: Register models via `/models` endpoint
+2. **Collection Selection**: Choose domain-specific collections
+3. **Evaluation Submission**: Submit batch evaluations
+4. **Progress Monitoring**: Poll status endpoints
+5. **Result Retrieval**: Access results via MLFlow integration
 6. **Governance Integration**: Surface metrics in model registry
 
 ### Development & Testing Workflow
 
-1. **Health Check**: Verify service status  
-2. **Provider Discovery**: List available providers and benchmarks  
-3. **Single Evaluation**: Test with `/evaluations/single`  
-4. **Batch Evaluation**: Scale to multiple benchmarks  
+1. **Health Check**: Verify service status
+2. **Provider Discovery**: List available providers and benchmarks
+3. **Single Evaluation**: Test with `/evaluations/single`
+4. **Batch Evaluation**: Scale to multiple benchmarks
 5. **Custom Collections**: Create organization-specific suites
 
 ### Continuous Integration Pattern
@@ -1588,11 +1588,11 @@ curl -X POST "{{baseUrl}}/evaluations/collections/healthcare_safety_v1?async_mod
 
 **Commentary**: Collection evaluation automatically optimizes execution by:
 
-1. **Provider Grouping**: Benchmarks are grouped by provider\_id  
-2. **Batch Optimization**: LM-Evaluation-Harness supports multi-benchmark execution, reducing from 3 jobs to 1  
-3. **Parallel Execution**: Different providers run concurrently (4 total jobs vs 6 sequential)  
-4. **Time Efficiency**: \~60% reduction in total execution time through intelligent batching  
-5. **Resource Optimization**: Fewer job spawns, better resource utilization  
+1. **Provider Grouping**: Benchmarks are grouped by provider\_id
+2. **Batch Optimization**: LM-Evaluation-Harness supports multi-benchmark execution, reducing from 3 jobs to 1
+3. **Parallel Execution**: Different providers run concurrently (4 total jobs vs 6 sequential)
+4. **Time Efficiency**: \~60% reduction in total execution time through intelligent batching
+5. **Resource Optimization**: Fewer job spawns, better resource utilization
 6. **Transparent Tracking**: Full visibility into optimization decisions and job structure
 
 ---

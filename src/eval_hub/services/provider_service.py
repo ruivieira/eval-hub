@@ -1,8 +1,9 @@
 """Provider service for managing evaluation providers and benchmarks."""
 
 from pathlib import Path
+from typing import Any
 
-import yaml
+import yaml  # type: ignore[import-untyped]
 
 from ..core.config import Settings
 from ..core.logging import get_logger
@@ -17,6 +18,7 @@ from ..models.provider import (
     Provider,
     ProvidersData,
     ProviderSummary,
+    ProviderType,
 )
 
 logger = get_logger(__name__)
@@ -108,7 +110,7 @@ class ProviderService:
                     num_few_shot=benchmark.num_few_shot,
                     dataset_size=benchmark.dataset_size,
                     tags=benchmark.tags,
-                    provider_type=provider.provider_type.value,
+                    provider_type=ProviderType(provider.provider_type.value),
                     base_url=provider.base_url,
                 )
 
@@ -172,12 +174,14 @@ class ProviderService:
             }
             benchmarks.append(benchmark_dict)
 
-        provider_ids = list({b["provider_id"] for b in benchmarks})
+        provider_ids: list[str] = [
+            str(b["provider_id"]) for b in benchmarks if "provider_id" in b
+        ]
 
         return ListBenchmarksResponse(
             benchmarks=benchmarks,
             total_count=len(benchmarks),
-            providers_included=provider_ids,
+            providers_included=list(set(provider_ids)),
         )
 
     def get_benchmarks_by_provider(self, provider_id: str) -> list[BenchmarkDetail]:
@@ -316,7 +320,7 @@ class ProviderService:
                     )
 
         # Update fields that are provided
-        update_data = {}
+        update_data: dict[str, Any] = {}
         if request.name is not None:
             update_data["name"] = request.name
         if request.description is not None:

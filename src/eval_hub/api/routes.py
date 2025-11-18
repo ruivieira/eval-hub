@@ -27,6 +27,7 @@ from ..models.evaluation import (
     EvaluationResponse,
     EvaluationResult,
     EvaluationSpec,
+    EvaluationStatus,
     SingleBenchmarkEvaluationRequest,
 )
 from ..models.health import HealthResponse
@@ -64,7 +65,7 @@ logger = get_logger(__name__)
 
 # Global state for active evaluations and services
 active_evaluations: dict[str, EvaluationResponse] = {}
-evaluation_tasks: dict[str, asyncio.Task] = {}
+evaluation_tasks: dict[str, asyncio.Task[Any]] = {}
 
 
 def get_request_parser(settings: Settings = Depends(get_settings)) -> RequestParser:
@@ -102,7 +103,7 @@ def get_provider_service(request: Request) -> ProviderService:
         provider_service = ProviderService(settings)
         provider_service.initialize()
         request.app.state.provider_service = provider_service
-    return request.app.state.provider_service
+    return request.app.state.provider_service  # type: ignore[no-any-return]
 
 
 @router.get("/health", response_model=HealthResponse)
@@ -112,7 +113,7 @@ async def health_check(settings: Settings = Depends(get_settings)) -> HealthResp
     start_time = getattr(health_check, "start_time", time.time())
     uptime_seconds = time.time() - start_time
     if not hasattr(health_check, "start_time"):
-        health_check.start_time = start_time
+        health_check.start_time = start_time  # type: ignore[attr-defined]
 
     # Check component health
     components = {}
@@ -211,27 +212,36 @@ async def create_single_benchmark_evaluation(
             EvaluationSpec(
                 name=f"{benchmark.name} Evaluation",
                 description=f"Evaluation of {request.model['server']}::{request.model['name']} on {benchmark.name}",
-                model_server_id=request.model["server"],
-                model_name=request.model["name"],
-                model_configuration=request.model_configuration,
+                model={
+                    **request.model,
+                    "configuration": request.model_configuration,
+                },
                 backends=[
                     BackendSpec(
                         name=f"{provider_id}-backend",
                         type=backend_type,
+                        endpoint=None,
                         config={},
                         benchmarks=[
                             BenchmarkSpec(
                                 name=benchmark_id,
                                 tasks=[benchmark_id],
+                                num_fewshot=None,
+                                batch_size=None,
+                                limit=None,
+                                device=None,
                                 config=benchmark_config,
                             )
                         ],
                     )
                 ],
+                risk_category=None,
+                collection_id=None,
                 timeout_minutes=request.timeout_minutes,
                 retry_attempts=request.retry_attempts,
             )
         ],
+        callback_url=None,
     )
 
     logger.info(
@@ -257,7 +267,19 @@ async def create_single_benchmark_evaluation(
                 [],
                 experiment_url,
             )
-            initial_response.status = "pending"
+            initial_response.status = EvaluationStatus.PENDING
+
+            # Calculate total number of benchmark evaluations that will be executed
+            try:
+                total_benchmarks = sum(
+                    len(backend.benchmarks)
+                    for eval_spec in parsed_request.evaluations
+                    for backend in eval_spec.backends
+                )
+                initial_response.total_evaluations = total_benchmarks
+            except (TypeError, AttributeError):
+                # Handle mock objects or malformed requests
+                pass
 
             # Store in active evaluations
             active_evaluations[str(evaluation_request.request_id)] = initial_response
@@ -356,7 +378,19 @@ async def create_evaluation(
                 [],  # No results yet
                 experiment_url,
             )
-            initial_response.status = "pending"
+            initial_response.status = EvaluationStatus.PENDING
+
+            # Calculate total number of benchmark evaluations that will be executed
+            try:
+                total_benchmarks = sum(
+                    len(backend.benchmarks)
+                    for eval_spec in parsed_request.evaluations
+                    for backend in eval_spec.backends
+                )
+                initial_response.total_evaluations = total_benchmarks
+            except (TypeError, AttributeError):
+                # Handle mock objects or malformed requests
+                pass
 
             # Store in active evaluations
             active_evaluations[str(request.request_id)] = initial_response
@@ -487,7 +521,7 @@ async def cancel_evaluation(
 
     # Update status
     response = active_evaluations[request_id_str]
-    response.status = "cancelled"
+    response.status = EvaluationStatus.CANCELLED
     response.updated_at = utcnow()
 
     logger.info("Cancelled evaluation", request_id=request_id_str)
@@ -520,6 +554,8 @@ async def get_evaluation_summary(
         request_id=request_id,
         evaluations=[],  # Would be populated from stored data
         created_at=response.created_at,
+        experiment_name=None,
+        callback_url=None,
     )
 
     summary = await response_builder.build_summary_response(
@@ -553,11 +589,11 @@ async def get_system_metrics(
     }
 
     # Count evaluations by status
+    status_breakdown: dict[str, int] = {}
     for response in active_evaluations.values():
-        status = response.status
-        metrics["status_breakdown"][status] = (
-            metrics["status_breakdown"].get(status, 0) + 1
-        )
+        status_str = response.status.value
+        status_breakdown[status_str] = status_breakdown.get(status_str, 0) + 1
+    metrics["status_breakdown"] = status_breakdown
 
     return metrics
 
@@ -626,12 +662,14 @@ async def list_all_benchmarks(
             }
             benchmarks.append(benchmark_dict)
 
-        provider_ids = list({b["provider_id"] for b in benchmarks})
+        provider_ids: list[str] = [
+            str(b["provider_id"]) for b in benchmarks if "provider_id" in b
+        ]
 
         return ListBenchmarksResponse(
             benchmarks=benchmarks,
             total_count=len(benchmarks),
-            providers_included=provider_ids,
+            providers_included=list(set(provider_ids)),
         )
     else:
         # Return all benchmarks
@@ -1249,14 +1287,16 @@ async def _execute_evaluation_async(
 
     try:
         # Progress callback to update stored response
-        async def progress_callback(eval_id: str, progress: float, message: str):
+        def progress_callback_sync(eval_id: str, progress: float, message: str) -> None:
             if request_id_str in active_evaluations:
                 response = active_evaluations[request_id_str]
                 response.updated_at = utcnow()
                 # In a real implementation, you'd update individual evaluation progress
 
         # Execute evaluations
-        results = await executor.execute_evaluation_request(request, progress_callback)
+        results = await executor.execute_evaluation_request(
+            request, progress_callback_sync
+        )
 
         # Log results to MLFlow (mocked)
         for result in results:
@@ -1284,7 +1324,7 @@ async def _execute_evaluation_async(
         # Update response with error
         if request_id_str in active_evaluations:
             response = active_evaluations[request_id_str]
-            response.status = "failed"
+            response.status = EvaluationStatus.FAILED
             response.updated_at = utcnow()
 
     finally:

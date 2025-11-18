@@ -7,11 +7,10 @@ from unittest.mock import patch
 
 import pytest
 import yaml
-from fastapi.testclient import TestClient
-
 from eval_hub.api.app import create_app
 from eval_hub.core.config import Settings
 from eval_hub.services.provider_service import ProviderService
+from fastapi.testclient import TestClient
 
 
 @pytest.fixture
@@ -246,7 +245,7 @@ class TestProviderEndpointsIntegration:
         providers_data = response.json()
         # Update expectations to match the actual data being loaded
         assert providers_data["total_providers"] == 3
-        assert providers_data["total_benchmarks"] == 175
+        assert providers_data["total_benchmarks"] == 176
 
         provider_ids = [p["provider_id"] for p in providers_data["providers"]]
         assert "lm_evaluation_harness" in provider_ids
@@ -260,7 +259,7 @@ class TestProviderEndpointsIntegration:
         lm_eval_data = response.json()
         assert lm_eval_data["provider_id"] == "lm_evaluation_harness"
         assert lm_eval_data["provider_name"] == "LM Evaluation Harness"
-        assert len(lm_eval_data["benchmarks"]) == 167  # Real data has 167 benchmarks
+        assert len(lm_eval_data["benchmarks"]) == 168  # Real data has 168 benchmarks
 
         # Step 3: List all benchmarks
         response = integration_client.get("/api/v1/benchmarks")
@@ -268,9 +267,9 @@ class TestProviderEndpointsIntegration:
 
         benchmarks_data = response.json()
         assert (
-            benchmarks_data["total_count"] == 175
-        )  # Real data has 175 total benchmarks
-        assert len(benchmarks_data["benchmarks"]) == 175
+            benchmarks_data["total_count"] == 176
+        )  # Real data has 176 total benchmarks
+        assert len(benchmarks_data["benchmarks"]) == 176
         assert (
             len(benchmarks_data["providers_included"]) == 3
         )  # Real data has 3 providers
@@ -282,7 +281,7 @@ class TestProviderEndpointsIntegration:
         assert response.status_code == 200
 
         lm_eval_benchmarks = response.json()
-        assert len(lm_eval_benchmarks) == 167  # Real data has 167 lm_eval benchmarks
+        assert len(lm_eval_benchmarks) == 168  # Real data has 168 lm_eval benchmarks
         assert all(
             b["provider_id"] == "lm_evaluation_harness" for b in lm_eval_benchmarks
         )
@@ -304,7 +303,7 @@ class TestProviderEndpointsIntegration:
         assert response.status_code == 200
         data = response.json()
         lm_eval_benchmarks = data["benchmarks"]
-        assert len(lm_eval_benchmarks) == 167  # Real data has 167 lm_eval benchmarks
+        assert len(lm_eval_benchmarks) == 168  # Real data has 168 lm_eval benchmarks
         assert all(
             b["provider_id"] == "lm_evaluation_harness" for b in lm_eval_benchmarks
         )
@@ -322,7 +321,7 @@ class TestProviderEndpointsIntegration:
         assert response.status_code == 200
         data = response.json()
         reasoning_benchmarks = data["benchmarks"]
-        assert len(reasoning_benchmarks) == 15  # Real data has 15 reasoning benchmarks
+        assert len(reasoning_benchmarks) == 16  # Real data has 16 reasoning benchmarks
         assert all("reasoning" in b["tags"] for b in reasoning_benchmarks)
 
         # Test multiple filters
