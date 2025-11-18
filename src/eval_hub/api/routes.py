@@ -412,18 +412,18 @@ async def create_evaluation(
         ) from e
 
 
-@router.get("/evaluations/{request_id}", response_model=EvaluationResponse)
+@router.get("/evaluations/{id}", response_model=EvaluationResponse)
 async def get_evaluation_status(
-    request_id: UUID,
+    id: UUID,
     response_builder: ResponseBuilder = Depends(get_response_builder),
 ) -> EvaluationResponse:
     """Get the status of an evaluation request."""
-    request_id_str = str(request_id)
+    request_id_str = str(id)
 
     if request_id_str not in active_evaluations:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Evaluation request {request_id} not found",
+            detail=f"Evaluation request {id} not found",
         )
 
     response = active_evaluations[request_id_str]
@@ -465,18 +465,18 @@ async def list_evaluations(
     return evaluations
 
 
-@router.delete("/evaluations/{request_id}")
+@router.delete("/evaluations/{id}")
 async def cancel_evaluation(
-    request_id: UUID,
+    id: UUID,
     executor: EvaluationExecutor = Depends(get_evaluation_executor),
 ) -> JSONResponse:
     """Cancel a running evaluation."""
-    request_id_str = str(request_id)
+    request_id_str = str(id)
 
     if request_id_str not in active_evaluations:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Evaluation request {request_id} not found",
+            detail=f"Evaluation request {id} not found",
         )
 
     # Cancel the task if it's running
@@ -494,22 +494,22 @@ async def cancel_evaluation(
 
     return JSONResponse(
         status_code=status.HTTP_200_OK,
-        content={"message": f"Evaluation {request_id} cancelled successfully"},
+        content={"message": f"Evaluation {id} cancelled successfully"},
     )
 
 
-@router.get("/evaluations/{request_id}/summary")
+@router.get("/evaluations/{id}/summary")
 async def get_evaluation_summary(
-    request_id: UUID,
+    id: UUID,
     response_builder: ResponseBuilder = Depends(get_response_builder),
 ) -> dict[str, Any]:
     """Get a summary of an evaluation request."""
-    request_id_str = str(request_id)
+    request_id_str = str(id)
 
     if request_id_str not in active_evaluations:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Evaluation request {request_id} not found",
+            detail=f"Evaluation request {id} not found",
         )
 
     response = active_evaluations[request_id_str]
@@ -517,7 +517,7 @@ async def get_evaluation_summary(
     # Create a mock request for summary building
     # In a real implementation, you'd store the original request
     mock_request = EvaluationRequest(
-        request_id=request_id,
+        request_id=id,
         evaluations=[],  # Would be populated from stored data
         created_at=response.created_at,
     )
@@ -1179,7 +1179,7 @@ async def reload_runtime_servers(
         ) from e
 
 
-# Evaluation Results Callback Endpoint (for Job completion callbacks)
+# Evaluation Results Callback Endpoint (for Jobs completion callbacks)
 
 
 @router.post("/api/v1/evaluation-results")
