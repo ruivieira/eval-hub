@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/julpayne/eval-hub/internal/executioncontext"
+	"github.com/eval-hub/eval-hub/internal/executioncontext"
 )
 
 // newExecutionContext creates a new ExecutionContext with default values. This function

@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/julpayne/eval-hub/internal/abstractions"
-	"github.com/julpayne/eval-hub/internal/config"
-	"github.com/julpayne/eval-hub/internal/storage/storage_sql"
+	"github.com/eval-hub/eval-hub/internal/abstractions"
+	"github.com/eval-hub/eval-hub/internal/config"
+	"github.com/eval-hub/eval-hub/internal/storage/storage_sql"
 )
 
 func NewStorage(serviceConfig *config.Config, logger *slog.Logger) (abstractions.Storage, error) {

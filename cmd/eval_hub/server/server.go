@@ -8,11 +8,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/eval-hub/eval-hub/internal/abstractions"
+	"github.com/eval-hub/eval-hub/internal/config"
+	"github.com/eval-hub/eval-hub/internal/constants"
+	"github.com/eval-hub/eval-hub/internal/handlers"
 	"github.com/go-playground/validator/v10"
-	"github.com/julpayne/eval-hub/internal/abstractions"
-	"github.com/julpayne/eval-hub/internal/config"
-	"github.com/julpayne/eval-hub/internal/constants"
-	"github.com/julpayne/eval-hub/internal/handlers"
 
 	"github.com/google/uuid"
 	"github.com/prometheus/client_golang/prometheus/promhttp"

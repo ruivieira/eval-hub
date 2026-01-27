@@ -9,11 +9,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/julpayne/eval-hub/cmd/eval_hub/server"
-	"github.com/julpayne/eval-hub/internal/config"
-	"github.com/julpayne/eval-hub/internal/logging"
-	"github.com/julpayne/eval-hub/internal/storage"
-	"github.com/julpayne/eval-hub/internal/validation"
+	"github.com/eval-hub/eval-hub/cmd/eval_hub/server"
+	"github.com/eval-hub/eval-hub/internal/config"
+	"github.com/eval-hub/eval-hub/internal/logging"
+	"github.com/eval-hub/eval-hub/internal/storage"
+	"github.com/eval-hub/eval-hub/internal/validation"
 )
 
 func TestNewServer(t *testing.T) {

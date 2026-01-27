@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/julpayne/eval-hub/internal/executioncontext"
+	"github.com/eval-hub/eval-hub/internal/executioncontext"
 )
 
 func (h *Handlers) HandleStatus(ctx *executioncontext.ExecutionContext, w http.ResponseWriter) {

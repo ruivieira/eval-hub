@@ -1,4 +1,4 @@
-module github.com/julpayne/eval-hub
+module github.com/eval-hub/eval-hub
 
 go 1.24.0
 

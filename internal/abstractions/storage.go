@@ -3,8 +3,8 @@ package abstractions
 import (
 	"time"
 
-	"github.com/julpayne/eval-hub/internal/executioncontext"
-	"github.com/julpayne/eval-hub/pkg/api"
+	"github.com/eval-hub/eval-hub/internal/executioncontext"
+	"github.com/eval-hub/eval-hub/pkg/api"
 )
 
 type Storage interface {

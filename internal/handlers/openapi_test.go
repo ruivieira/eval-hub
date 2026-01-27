@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/julpayne/eval-hub/internal/handlers"
+	"github.com/eval-hub/eval-hub/internal/handlers"
 )
 
 func TestHandleOpenAPI(t *testing.T) {

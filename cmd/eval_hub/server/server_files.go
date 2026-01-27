@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/julpayne/eval-hub/internal/config"
-	"github.com/julpayne/eval-hub/internal/constants"
+	"github.com/eval-hub/eval-hub/internal/config"
+	"github.com/eval-hub/eval-hub/internal/constants"
 )
 
 // handle ready and termination messages

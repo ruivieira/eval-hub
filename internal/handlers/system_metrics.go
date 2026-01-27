@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/julpayne/eval-hub/internal/executioncontext"
+	"github.com/eval-hub/eval-hub/internal/executioncontext"
 )
 
 // HandleGetSystemMetrics handles GET /api/v1/metrics/system

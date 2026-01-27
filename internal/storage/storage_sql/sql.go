@@ -14,10 +14,10 @@ import (
 	// import the sqlite driver - "sqlite"
 	_ "modernc.org/sqlite"
 
-	"github.com/julpayne/eval-hub/internal/abstractions"
-	"github.com/julpayne/eval-hub/internal/config"
-	"github.com/julpayne/eval-hub/internal/executioncontext"
-	"github.com/julpayne/eval-hub/pkg/api"
+	"github.com/eval-hub/eval-hub/internal/abstractions"
+	"github.com/eval-hub/eval-hub/internal/config"
+	"github.com/eval-hub/eval-hub/internal/executioncontext"
+	"github.com/eval-hub/eval-hub/pkg/api"
 )
 
 type SQLStorage struct {

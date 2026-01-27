@@ -4,7 +4,7 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/julpayne/eval-hub/internal/executioncontext"
+	"github.com/eval-hub/eval-hub/internal/executioncontext"
 	"go.uber.org/zap"
 	"go.uber.org/zap/exp/zapslog"
 	"go.uber.org/zap/zapcore"

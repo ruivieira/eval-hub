@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/julpayne/eval-hub/internal/handlers"
+	"github.com/eval-hub/eval-hub/internal/handlers"
 )
 
 func TestHandleHealth(t *testing.T) {

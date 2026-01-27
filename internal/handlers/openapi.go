@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/julpayne/eval-hub/internal/executioncontext"
+	"github.com/eval-hub/eval-hub/internal/executioncontext"
 )
 
 func (h *Handlers) HandleOpenAPI(ctx *executioncontext.ExecutionContext, w http.ResponseWriter) {

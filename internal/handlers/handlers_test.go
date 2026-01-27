@@ -3,8 +3,8 @@ package handlers_test
 import (
 	"testing"
 
-	"github.com/julpayne/eval-hub/internal/executioncontext"
-	"github.com/julpayne/eval-hub/internal/handlers"
+	"github.com/eval-hub/eval-hub/internal/executioncontext"
+	"github.com/eval-hub/eval-hub/internal/handlers"
 )
 
 func TestNew(t *testing.T) {

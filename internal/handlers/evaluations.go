@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/julpayne/eval-hub/internal/executioncontext"
-	"github.com/julpayne/eval-hub/internal/serialization"
-	"github.com/julpayne/eval-hub/pkg/api"
+	"github.com/eval-hub/eval-hub/internal/executioncontext"
+	"github.com/eval-hub/eval-hub/internal/serialization"
+	"github.com/eval-hub/eval-hub/pkg/api"
 )
 
 // BackendSpec represents the backend specification
