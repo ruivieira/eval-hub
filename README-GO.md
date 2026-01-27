@@ -6,7 +6,7 @@ A Go API service built with net/http.
 
 ### Prerequisites
 
-- Go 1.24 or higher
+- Go 1.25 or higher
 - Podman (for container builds)
 
 ### Running the Service
@@ -122,7 +122,7 @@ podman build -t eval-hub:latest \
 ```
 
 This builds the image with:
-- Go 1.24 toolchain (UBI9 base)
+- Go 1.25 toolchain (UBI9 base)
 - Build metadata (version 0.0.1 and timestamp)
 - Multi-stage build for minimal final image
 
