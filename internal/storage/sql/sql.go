@@ -17,6 +17,7 @@ import (
 
 	"github.com/eval-hub/eval-hub/internal/abstractions"
 	"github.com/eval-hub/eval-hub/internal/executioncontext"
+	"github.com/eval-hub/eval-hub/internal/storage/sql/schemas"
 	"github.com/eval-hub/eval-hub/pkg/api"
 )
 
@@ -60,7 +61,7 @@ func NewStorage(config map[string]any, logger *slog.Logger) (abstractions.Storag
 		return nil, err
 	}
 
-	if err := storage.checkTables(&storage.sqlConfig.Evaluations); err != nil {
+	if err := storage.ensureSchema(sqlConfig.Driver); err != nil {
 		return nil, err
 	}
 
@@ -84,16 +85,8 @@ func (s *SQLStorage) exec(query string, args ...any) (sql.Result, error) {
 	return s.pool.ExecContext(context.Background(), query, args...)
 }
 
-func (s *SQLStorage) checkTables(tableConfig *SQLTableConfig) error {
-
-	if err := tableConfig.CheckConfig(); err != nil {
-		return err
-	}
-	if _, err := s.exec(createEvaluationsTable()); err != nil {
-		return err
-	}
-
-	if _, err := s.exec(createCollectionsTable()); err != nil {
+func (s *SQLStorage) ensureSchema(driver string) error {
+	if _, err := s.exec(schemas.SchemaForDriver(driver)); err != nil {
 		return err
 	}
 
@@ -110,7 +103,7 @@ func (s *SQLStorage) CreateEvaluationJob(executionContext *executioncontext.Exec
 	if err != nil {
 		return nil, err
 	}
-	result, err := s.exec(createAddEntityStatement(), string(evaluationJSON))
+	result, err := s.exec(INSERT_EVALUATION_STATEMENT, string(evaluationJSON))
 	if err != nil {
 		return nil, err
 	}

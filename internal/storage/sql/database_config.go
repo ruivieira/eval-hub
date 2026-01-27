@@ -1,7 +1,6 @@
 package sql
 
 import (
-	"fmt"
 	"time"
 )
 
@@ -18,23 +17,6 @@ type SQLDatabaseConfig struct {
 	MaxOpenConns    *int           `mapstructure:"max_open_conns,omitempty"`
 	Fallback        bool           `mapstructure:"fallback,omitempty"`
 	DatabaseName    string         `mapstructure:"database_name,omitempty"`
-	// Tables configurations
-	Evaluations SQLTableConfig `mapstructure:"evaluations"`
-	Collections SQLTableConfig `mapstructure:"collections"`
+
 	// Other map[string]any `mapstructure:",remain"`
-}
-
-type SQLTableConfig struct {
-	TableName     string `mapstructure:"table_name"`
-	JSONFieldType string `mapstructure:"json_field_type,omitempy"` // fallback is TEXT
-}
-
-func (tc *SQLTableConfig) CheckConfig() error {
-	if tc.TableName == "" {
-		return fmt.Errorf("missing table name")
-	}
-	if tc.JSONFieldType == "" {
-		tc.JSONFieldType = "TEXT"
-	}
-	return nil
 }

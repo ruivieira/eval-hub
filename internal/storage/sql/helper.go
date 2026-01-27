@@ -1,22 +1,7 @@
 package sql
 
-func createEvaluationsTable() string {
-	return `CREATE TABLE IF NOT EXISTS Evaluations (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    entity TEXT NOT NULL CHECK (json_valid(entity))
-);`
-}
+const INSERT_EVALUATION_STATEMENT = `INSERT INTO evaluations (entity)
+VALUES (?);`
 
-func createCollectionsTable() string {
-	return `CREATE TABLE IF NOT EXISTS Collections (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    entity TEXT NOT NULL CHECK (json_valid(entity))
-);`
-}
-
-// createAddEntityStatement the order or arguments is:
-// table_name entity
-func createAddEntityStatement() string {
-	return `INSERT INTO Evaluations (entity)
-	VALUES (?);`
-}
+const INSERT_COLLECTION_STATEMENT = `INSERT INTO collections (entity)
+VALUES (?);`
