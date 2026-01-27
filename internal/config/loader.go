@@ -83,7 +83,7 @@ func readConfig(logger *slog.Logger, defaultConfigValues *viper.Viper, name stri
 //   - error: An error if configuration cannot be loaded or is invalid
 func LoadConfig(logger *slog.Logger, version string, build string, buildDate string) (*Config, error) {
 	// first load the server.yaml as the default config (the server.yaml from config)
-	configValues, err := readConfig(logger, nil, "server", "yaml", "config")
+	configValues, err := readConfig(logger, nil, "server", "yaml", "config", "./config", "../../config")
 	if err != nil {
 		return nil, err
 	}
