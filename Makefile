@@ -97,7 +97,7 @@ test-coverage: ## Run unit tests with coverage
 test-fvt-coverage: ## Run integration (FVT) tests with coverage
 	@echo "Running integration (FVT) tests with coverage..."
 	@mkdir -p $(BIN_DIR)
-	@go test -v -race -coverprofile=$(BIN_DIR)/coverage-fvt.out -covermode=atomic./tests/features/...
+	@go test -v -race -coverprofile=$(BIN_DIR)/coverage-fvt.out -covermode=atomic ./tests/features/...
 	@go tool cover -html=$(BIN_DIR)/coverage-fvt.out -o $(BIN_DIR)/coverage-fvt.html
 	@echo "Coverage report generated: $(BIN_DIR)/coverage-fvt.html"
 
