@@ -163,3 +163,30 @@ grant-permissions:
 .PHONY: cls
 cls:
 	printf "\33c\e[3J"
+
+## Targets for the API documentation
+
+.PHONY: generate-public-docs verify-api-docs generate-ignore-file
+
+REDOCLY_CLI ?= ${PWD}/node_modules/.bin/redocly
+
+${REDOCLY_CLI}:
+	npm i @redocly/cli@latest
+
+clean-docs:
+	rm -f docs/openapi.yaml docs/openapi.json docs/openapi-internal.yaml docs/openapi-internal.json docs/*.html
+
+generate-public-docs: ${REDOCLY_CLI}
+	cd docs && ${REDOCLY_CLI} bundle external@latest --output openapi.yaml --remove-unused-components
+	cd docs && ${REDOCLY_CLI} bundle external@latest --ext json --output openapi.json
+	cd docs && ${REDOCLY_CLI} bundle internal@latest --output openapi-internal.yaml --remove-unused-components
+	cd docs && ${REDOCLY_CLI} bundle internal@latest --ext json --output openapi-internal.json
+	cd docs && ${REDOCLY_CLI} build-docs openapi.json --output=index-public.html
+	cd docs && ${REDOCLY_CLI} build-docs openapi-internal.json --output=index.html
+
+verify-api-docs: ${REDOCLY_CLI}
+	${REDOCLY_CLI} lint ./docs/openapi.yaml
+	echo "See https://editor.swagger.io/?url=https://raw.githubusercontent.com/julpayne/eval-hub/refs/heads/api-updates/docs/openapi.yaml"
+
+generate-ignore-file: ${REDOCLY_CLI}
+	${REDOCLY_CLI} lint --generate-ignore-file ./docs/openapi.yaml
