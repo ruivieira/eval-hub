@@ -54,6 +54,9 @@ func (h *KubernetesHelper) CreateConfigMap(
 	data map[string]string,
 	opts *CreateConfigMapOptions,
 ) (*corev1.ConfigMap, error) {
+	if namespace == "" || name == "" {
+		return nil, fmt.Errorf("namespace and name are required")
+	}
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
