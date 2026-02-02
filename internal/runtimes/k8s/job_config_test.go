@@ -21,8 +21,10 @@ func TestBuildJobConfigDefaults(t *testing.T) {
 	}
 	provider := &api.ProviderResource{
 		ProviderID: "provider-1",
-		Runtime: &api.ProviderRuntime{
-			Image: "adapter:latest",
+		Runtime: &api.Runtime{
+			K8s: &api.K8sRuntime{
+				Image: "adapter:latest",
+			},
 		},
 	}
 
@@ -94,7 +96,7 @@ func TestBuildJobConfigMissingAdapterImage(t *testing.T) {
 	}
 	provider := &api.ProviderResource{
 		ProviderID: "provider-1",
-		Runtime:    &api.ProviderRuntime{},
+		Runtime:    &api.Runtime{},
 	}
 
 	_, err := buildJobConfig(evaluation, provider, "bench-1")
@@ -112,8 +114,10 @@ func TestBuildJobConfigMissingServiceURL(t *testing.T) {
 	}
 	provider := &api.ProviderResource{
 		ProviderID: "provider-1",
-		Runtime: &api.ProviderRuntime{
-			Image: "adapter:latest",
+		Runtime: &api.Runtime{
+			K8s: &api.K8sRuntime{
+				Image: "adapter:latest",
+			},
 		},
 	}
 

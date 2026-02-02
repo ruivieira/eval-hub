@@ -8,7 +8,12 @@ type ProviderResource struct {
 	ProviderType string              `mapstructure:"provider_type" yaml:"provider_type" json:"provider_type"`
 	BaseURL      *string             `mapstructure:"base_url" yaml:"base_url" json:"base_url"`
 	Benchmarks   []BenchmarkResource `mapstructure:"benchmarks" yaml:"benchmarks" json:"benchmarks"`
-	Runtime      *ProviderRuntime    `mapstructure:"runtime" yaml:"runtime" json:"-"`
+	Runtime      *Runtime            `mapstructure:"runtime" yaml:"runtime" json:"runtime,omitempty"`
+}
+
+type Runtime struct {
+	K8s   *K8sRuntime   `mapstructure:"k8s" yaml:"k8s" json:"k8s,omitempty"`
+	Local *LocalRuntime `mapstructure:"local" yaml:"local" json:"local,omitempty"`
 }
 
 // ProviderRuntime contains runtime configuration for Kubernetes jobs.
@@ -25,7 +30,7 @@ type ProviderResource struct {
 //	  default_env:
 //	    - name: FOO
 //	      value: "bar"
-type ProviderRuntime struct {
+type K8sRuntime struct {
 	Image         string   `mapstructure:"image" yaml:"image"`
 	Entrypoint    string   `mapstructure:"entrypoint" yaml:"entrypoint"`
 	CPURequest    string   `mapstructure:"cpu_request" yaml:"cpu_request"`
@@ -33,6 +38,9 @@ type ProviderRuntime struct {
 	CPULimit      string   `mapstructure:"cpu_limit" yaml:"cpu_limit"`
 	MemoryLimit   string   `mapstructure:"memory_limit" yaml:"memory_limit"`
 	Env           []EnvVar `mapstructure:"env" yaml:"env"`
+}
+
+type LocalRuntime struct {
 }
 
 // ProviderResourceList represents response for listing providers
