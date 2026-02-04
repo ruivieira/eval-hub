@@ -41,6 +41,10 @@ func (f *fakeStorage) UpdateEvaluationJobStatus(_ *executioncontext.ExecutionCon
 	f.called = true
 	return nil
 }
+func (f *fakeStorage) UpdateEvaluationJob(_ *executioncontext.ExecutionContext, _ string, _ *api.RunStatusInternal) error {
+	f.called = true
+	return nil
+}
 func (f *fakeStorage) CreateCollection(_ *executioncontext.ExecutionContext, _ *api.CollectionResource) error {
 	return nil
 }

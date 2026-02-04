@@ -105,7 +105,12 @@ func (s *SQLStorage) GetEvaluationJob(ctx *executioncontext.ExecutionContext, id
 		return nil, serviceerrors.NewServiceError(messages.JSONUnmarshalFailed, "Type", "evaluation job", "Error", err.Error())
 	}
 
-	// Parse status from database
+	evaluationResource := constructEvaluationResource(statusStr, dbID, createdAt, updatedAt, evaluationConfig)
+
+	return evaluationResource, nil
+}
+
+func constructEvaluationResource(statusStr string, dbID string, createdAt time.Time, updatedAt time.Time, evaluationConfig api.EvaluationJobConfig) *api.EvaluationJobResource {
 	status := api.State(statusStr)
 
 	// Construct the EvaluationJobResource
@@ -133,8 +138,7 @@ func (s *SQLStorage) GetEvaluationJob(ctx *executioncontext.ExecutionContext, id
 		},
 		Results: nil, // TODO: retrieve results from database if needed
 	}
-
-	return evaluationResource, nil
+	return evaluationResource
 }
 
 func (s *SQLStorage) getEvaluationJobTransactional(ctx *executioncontext.ExecutionContext, txn *sql.Tx, id string) (*api.EvaluationJobResource, error) {
@@ -168,34 +172,7 @@ func (s *SQLStorage) getEvaluationJobTransactional(ctx *executioncontext.Executi
 		return nil, serviceerrors.NewServiceError(messages.JSONUnmarshalFailed, "Type", "evaluation job", "Error", err.Error())
 	}
 
-	// Parse status from database
-	status := api.State(statusStr)
-
-	// Construct the EvaluationJobResource
-	// Note: Results and Benchmarks are initialized with defaults since they're not stored in the entity column
-	evaluationResource := &api.EvaluationJobResource{
-		Resource: api.EvaluationResource{
-			Resource: api.Resource{
-				ID:        dbID,
-				Tenant:    "TODO", // TODO: retrieve tenant from database or context
-				CreatedAt: createdAt,
-				UpdatedAt: updatedAt,
-			},
-			MLFlowExperimentID: nil,
-		},
-		EvaluationJobConfig: evaluationConfig,
-		Status: &api.EvaluationJobStatus{
-			EvaluationJobState: api.EvaluationJobState{
-				State: status,
-				Message: &api.MessageInfo{
-					Message:     "Evaluation job retrieved",
-					MessageCode: constants.MESSAGE_CODE_EVALUATION_JOB_RETRIEVED,
-				},
-			},
-			Benchmarks: nil, // TODO: retrieve benchmarks status from database
-		},
-		Results: nil, // TODO: retrieve results from database if needed
-	}
+	evaluationResource := constructEvaluationResource(statusStr, dbID, createdAt, updatedAt, evaluationConfig)
 
 	return evaluationResource, nil
 }
@@ -413,7 +390,6 @@ func (s *SQLStorage) updateEvaluationJobTransactional(ctx *executioncontext.Exec
 		return serviceerrors.NewServiceError(messages.DatabaseOperationFailed, "Type", "evaluation job", "ResourceId", id, "Error", err.Error())
 	}
 
-	ctx.Logger.Debug("Updated evaluation job", "id", id, "status", statusStr, "entity", entityJSON)
 	ctx.Logger.Info("Updated evaluation job", "id", id, "status", statusStr)
 	return nil
 }
