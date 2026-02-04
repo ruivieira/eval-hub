@@ -89,7 +89,7 @@ func (h *Handlers) HandleCreateEvaluation(ctx *executioncontext.ExecutionContext
 		return
 	}
 
-	response, err := h.storage.CreateEvaluationJob(ctx, evaluation)
+	response, err := h.storage.CreateEvaluationJob(evaluation)
 	if err != nil {
 		w.Error(err, ctx.RequestID)
 		return
@@ -131,13 +131,20 @@ func (h *Handlers) HandleListEvaluations(ctx *executioncontext.ExecutionContext,
 		w.Error(err, ctx.RequestID)
 		return
 	}
-	response, err := h.storage.GetEvaluationJobs(ctx, r, limit, offset, statusFilter)
+	items, err := h.storage.GetEvaluationJobs(limit, offset, statusFilter)
 	if err != nil {
 		w.Error(err, ctx.RequestID)
 		return
 	}
-
-	w.WriteJSON(response, 200)
+	page, err := CreatePage(len(items), offset, limit, ctx, r)
+	if err != nil {
+		w.Error(err, ctx.RequestID)
+		return
+	}
+	w.WriteJSON(api.EvaluationJobResourceList{
+		Page:  *page,
+		Items: items,
+	}, 200)
 }
 
 // HandleGetEvaluation handles GET /api/v1/evaluations/jobs/{id}
@@ -151,7 +158,7 @@ func (h *Handlers) HandleGetEvaluation(ctx *executioncontext.ExecutionContext, r
 		return
 	}
 
-	response, err := h.storage.GetEvaluationJob(ctx, evaluationJobID)
+	response, err := h.storage.GetEvaluationJob(evaluationJobID)
 	if err != nil {
 		w.Error(err, ctx.RequestID)
 		return
@@ -183,7 +190,7 @@ func (h *Handlers) HandleUpdateEvaluation(ctx *executioncontext.ExecutionContext
 		return
 	}
 
-	err = h.storage.UpdateEvaluationJobStatus(ctx, evaluationJobID, status)
+	err = h.storage.UpdateEvaluationJobStatus(evaluationJobID, status)
 	if err != nil {
 		w.Error(err, ctx.RequestID)
 		return
@@ -209,7 +216,7 @@ func (h *Handlers) HandleCancelEvaluation(ctx *executioncontext.ExecutionContext
 		return
 	}
 
-	err = h.storage.DeleteEvaluationJob(ctx, evaluationJobID, hardDelete)
+	err = h.storage.DeleteEvaluationJob(evaluationJobID, hardDelete)
 	if err != nil {
 		ctx.Logger.Info("Failed to delete evaluation job", "error", err.Error(), "id", evaluationJobID, "hardDelete", hardDelete)
 		w.Error(err, ctx.RequestID)

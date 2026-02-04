@@ -73,14 +73,13 @@ func TestStorage(t *testing.T) {
 	})
 
 	t.Run("CreateEvaluationJob creates a new evaluation job", func(t *testing.T) {
-		ctx := createExecutionContext(logger)
 		job := &api.EvaluationJobConfig{
 			Model: api.ModelRef{
 				URL:  "http://test.com",
 				Name: "test",
 			},
 		}
-		resp, err := store.CreateEvaluationJob(ctx, job)
+		resp, err := store.CreateEvaluationJob(job)
 		if err != nil {
 			t.Fatalf("Failed to create evaluation job: %v", err)
 		}
@@ -91,8 +90,7 @@ func TestStorage(t *testing.T) {
 	})
 
 	t.Run("GetEvaluationJob returns the evaluation job", func(t *testing.T) {
-		ctx := createExecutionContext(logger)
-		resp, err := store.GetEvaluationJob(ctx, evaluationId)
+		resp, err := store.GetEvaluationJob(evaluationId)
 		if err != nil {
 			t.Fatalf("Failed to get evaluation job: %v", err)
 		}
@@ -102,23 +100,19 @@ func TestStorage(t *testing.T) {
 	})
 
 	t.Run("GetEvaluationJobs returns the evaluation jobs", func(t *testing.T) {
-		ctx := createExecutionContext(logger)
-		r := &testRequestWrapper{
-			uri:     &url.URL{Path: "/api/v1/evaluations/jobs"},
-			headers: make(map[string]string),
-		}
-		resp, err := store.GetEvaluationJobs(ctx, r, 10, 0, "")
+
+		resp, err := store.GetEvaluationJobs(10, 0, "")
 		if err != nil {
 			t.Fatalf("Failed to get evaluation jobs: %v", err)
 		}
-		if len(resp.Items) == 0 {
+		if len(resp) == 0 {
 			t.Fatalf("No evaluation jobs found")
 		}
 	})
 
 	t.Run("DeleteEvaluationJob deletes the evaluation job", func(t *testing.T) {
-		ctx := createExecutionContext(logger)
-		err := store.DeleteEvaluationJob(ctx, evaluationId, false)
+
+		err := store.DeleteEvaluationJob(evaluationId, false)
 		if err != nil {
 			t.Fatalf("Failed to delete evaluation job: %v", err)
 		}

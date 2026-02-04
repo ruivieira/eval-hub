@@ -1,7 +1,6 @@
 package sql
 
 import (
-	"github.com/eval-hub/eval-hub/internal/executioncontext"
 	"github.com/eval-hub/eval-hub/pkg/api"
 )
 
@@ -9,22 +8,22 @@ import (
 // Collection operations
 //#######################################################################
 
-func (s *SQLStorage) CreateCollection(ctx *executioncontext.ExecutionContext, collection *api.CollectionResource) error {
+func (s *SQLStorage) CreateCollection(collection *api.CollectionResource) error {
 	return nil
 }
 
-func (s *SQLStorage) GetCollection(ctx *executioncontext.ExecutionContext, id string, summary bool) (*api.CollectionResource, error) {
+func (s *SQLStorage) GetCollection(id string, summary bool) (*api.CollectionResource, error) {
 	return nil, nil
 }
 
-func (s *SQLStorage) GetCollections(ctx *executioncontext.ExecutionContext, limit int, offset int) (*api.CollectionResourceList, error) {
+func (s *SQLStorage) GetCollections(limit int, offset int) ([]api.CollectionResource, error) {
 	return nil, nil
 }
 
-func (s *SQLStorage) UpdateCollection(ctx *executioncontext.ExecutionContext, collection *api.CollectionResource) error {
+func (s *SQLStorage) UpdateCollection(collection *api.CollectionResource) error {
 	return nil
 }
 
-func (s *SQLStorage) DeleteCollection(ctx *executioncontext.ExecutionContext, id string) error {
+func (s *SQLStorage) DeleteCollection(id string) error {
 	return nil
 }

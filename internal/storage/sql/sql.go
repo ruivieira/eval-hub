@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/eval-hub/eval-hub/internal/abstractions"
-	"github.com/eval-hub/eval-hub/internal/executioncontext"
 	"github.com/eval-hub/eval-hub/pkg/api"
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/google/uuid"
@@ -23,9 +22,16 @@ const (
 	TABLE_COLLECTIONS = "collections"
 )
 
+type SQLStorageContext struct {
+	Tenant api.Tenant
+	Logger slog.Logger
+	URI    string
+}
+
 type SQLStorage struct {
 	sqlConfig *SQLDatabaseConfig
 	pool      *sql.DB
+	context   *SQLStorageContext
 }
 
 func NewStorage(config map[string]any, logger *slog.Logger) (abstractions.Storage, error) {
@@ -96,8 +102,8 @@ func (s *SQLStorage) GetDatasourceName() string {
 	return s.sqlConfig.Driver
 }
 
-func (s *SQLStorage) exec(ctx context.Context, query string, args ...any) (sql.Result, error) {
-	return s.pool.ExecContext(ctx, query, args...)
+func (s *SQLStorage) exec(query string, args ...any) (sql.Result, error) {
+	return s.pool.ExecContext(context.Background(), query, args...)
 }
 
 func (s *SQLStorage) ensureSchema() error {
@@ -105,14 +111,14 @@ func (s *SQLStorage) ensureSchema() error {
 	if err != nil {
 		return err
 	}
-	if _, err := s.exec(context.Background(), schemas); err != nil {
+	if _, err := s.exec(schemas); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (s *SQLStorage) getTenant(_ *executioncontext.ExecutionContext) (api.Tenant, error) {
+func (s *SQLStorage) getTenant() (api.Tenant, error) {
 	return "TODO", nil
 }
 

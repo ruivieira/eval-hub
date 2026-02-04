@@ -7,11 +7,9 @@ import (
 	"log/slog"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/eval-hub/eval-hub/internal/abstractions"
 	"github.com/eval-hub/eval-hub/internal/constants"
-	"github.com/eval-hub/eval-hub/internal/executioncontext"
 	"github.com/eval-hub/eval-hub/pkg/api"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -141,13 +139,8 @@ func (r *K8sRuntime) persistJobFailure(storage *abstractions.Storage, evaluation
 			},
 		},
 	}
-	ctx := &executioncontext.ExecutionContext{
-		Ctx:       context.Background(),
-		RequestID: "",
-		Logger:    r.logger,
-		StartedAt: time.Now(),
-	}
-	if err := (*storage).UpdateEvaluationJobStatus(ctx, evaluation.Resource.ID, status); err != nil {
+
+	if err := (*storage).UpdateEvaluationJobStatus(evaluation.Resource.ID, status); err != nil {
 		r.logger.Error("failed to update evaluation status", "error", err, "job_id", evaluation.Resource.ID)
 	}
 }
