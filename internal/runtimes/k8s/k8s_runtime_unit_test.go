@@ -61,7 +61,7 @@ func (f *fakeStorage) WithLogger(_ *slog.Logger) abstractions.Storage {
 }
 func TestPersistJobFailureNoStorage(t *testing.T) {
 	runtime := &K8sRuntime{}
-	runtime.persistJobFailure(nil, nil, context.Canceled)
+	runtime.persistJobFailure(nil, nil, nil, context.Canceled)
 }
 
 func TestPersistJobFailureUpdatesStatus(t *testing.T) {
@@ -73,7 +73,7 @@ func TestPersistJobFailureUpdatesStatus(t *testing.T) {
 			Resource: api.Resource{ID: "job-1"},
 		},
 	}
-	runtime.persistJobFailure(&store, evaluation, context.Canceled)
+	runtime.persistJobFailure(runtime.logger, &store, evaluation, context.Canceled)
 	if !storage.called {
 		t.Fatalf("expected UpdateEvaluationJobStatus to be called")
 	}
@@ -98,7 +98,7 @@ func TestCreateBenchmarkResourcesSetsConfigMapOwner(t *testing.T) {
 		providers: sampleProviders(providerID),
 	}
 
-	err := runtime.createBenchmarkResources(context.Background(), evaluation, &evaluation.Benchmarks[0])
+	err := runtime.createBenchmarkResources(context.Background(), runtime.logger, evaluation, &evaluation.Benchmarks[0])
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -139,7 +139,7 @@ func TestCreateBenchmarkResourcesDeletesConfigMapOnJobFailure(t *testing.T) {
 		providers: sampleProviders(providerID),
 	}
 
-	err := runtime.createBenchmarkResources(context.Background(), evaluation, &evaluation.Benchmarks[0])
+	err := runtime.createBenchmarkResources(context.Background(), runtime.logger, evaluation, &evaluation.Benchmarks[0])
 	if err == nil {
 		t.Fatalf("expected error, got nil")
 	}
