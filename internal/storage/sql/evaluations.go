@@ -160,7 +160,7 @@ func (s *SQLStorage) GetEvaluationJobs(limit int, offset int, statusFilter strin
 	}
 
 	// Query the database
-	rows, err := s.pool.QueryContext(context.Background(), listQuery, listArgs...)
+	rows, err := s.pool.QueryContext(s.ctx, listQuery, listArgs...)
 	if err != nil {
 		s.logger.Error("Failed to list evaluation jobs", "error", err)
 		return nil, serviceerrors.NewServiceError(messages.QueryFailed, "Type", "evaluation jobs", "Error", err.Error())
