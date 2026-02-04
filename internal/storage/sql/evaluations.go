@@ -167,7 +167,7 @@ func (s *SQLStorage) getEvaluationJobTransactional(txn *sql.Tx, id string) (*api
 		return nil, serviceerrors.NewServiceError(messages.JSONUnmarshalFailed, "Type", "evaluation job", "Error", err.Error())
 	}
 
-	evaluationResource := constructEvaluationResource(statusStr, dbID, createdAt, updatedAt, evaluationConfig)
+	evaluationResource := constructEvaluationResource(statusStr, dbID, createdAt, updatedAt, evaluationEntity)
 
 	return evaluationResource, nil
 }
@@ -357,7 +357,7 @@ func (s *SQLStorage) updateEvaluationJobTransactional(txn *sql.Tx, id string, st
 
 	_, err = s.exec(txn, updateQuery, args...)
 	if err != nil {
-		s.logger.Error("Failed to update evaluation job", "error", err, "id", id, "status", statusStr, "entity", entityJSON)
+		s.logger.Error("Failed to update evaluation job", "error", err, "id", id, "status", statusStr)
 		return serviceerrors.NewServiceError(messages.DatabaseOperationFailed, "Type", "evaluation job", "ResourceId", id, "Error", err.Error())
 	}
 
