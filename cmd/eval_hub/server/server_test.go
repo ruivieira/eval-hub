@@ -16,6 +16,7 @@ import (
 	"github.com/eval-hub/eval-hub/cmd/eval_hub/server"
 	"github.com/eval-hub/eval-hub/internal/config"
 	"github.com/eval-hub/eval-hub/internal/logging"
+	"github.com/eval-hub/eval-hub/internal/mlflow"
 	"github.com/eval-hub/eval-hub/internal/runtimes"
 	"github.com/eval-hub/eval-hub/internal/storage"
 	"github.com/eval-hub/eval-hub/internal/validation"
@@ -215,7 +216,8 @@ func createServer(port int) (*server.Server, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create runtime: %w", err)
 	}
-	return server.NewServer(logger, serviceConfig, providerConfigs, storage, validate, runtime)
+	mlflowClient := mlflow.NewMLFlowClient()
+	return server.NewServer(logger, serviceConfig, providerConfigs, storage, validate, runtime, mlflowClient)
 }
 
 func getKeyAsString(obj map[string]interface{}, key string) string {

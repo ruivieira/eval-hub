@@ -56,7 +56,9 @@ func NewServer(logger *slog.Logger,
 	providerConfigs map[string]api.ProviderResource,
 	storage abstractions.Storage,
 	validate *validator.Validate,
-	runtime abstractions.Runtime) (*Server, error) {
+	runtime abstractions.Runtime,
+	mlflowClient *mlflowclient.Client,
+) (*Server, error) {
 
 	if logger == nil {
 		return nil, fmt.Errorf("logger is required for the server")
@@ -65,7 +67,7 @@ func NewServer(logger *slog.Logger,
 		return nil, fmt.Errorf("service config is required for the server")
 	}
 	if storage == nil {
-		return nil, fmt.Errorf("executioncontext is required for the server")
+		return nil, fmt.Errorf("storage is required for the server")
 	}
 	if validate == nil {
 		return nil, fmt.Errorf("validator is required for the server")
@@ -79,6 +81,7 @@ func NewServer(logger *slog.Logger,
 		storage:         storage,
 		validate:        validate,
 		runtime:         runtime,
+		mlflowClient:    mlflowClient,
 	}, nil
 }
 

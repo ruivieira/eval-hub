@@ -5,11 +5,13 @@
 
 set -euo pipefail
 
+mkdir -p bin
+
 # Default values
 HOST=${MLFLOW_HOST:-"127.0.0.1"}
 PORT=${MLFLOW_PORT:-"5000"}
-BACKEND_URI=${MLFLOW_BACKEND_STORE_URI:-"sqlite:///mlflow.db"}
-DEFAULT_ARTIFACT_ROOT=${MLFLOW_DEFAULT_ARTIFACT_ROOT:-"./mlruns"}
+BACKEND_URI=${MLFLOW_BACKEND_STORE_URI:-"sqlite:///bin/mlflow.db"}
+DEFAULT_ARTIFACT_ROOT=${MLFLOW_DEFAULT_ARTIFACT_ROOT:-"./bin/mlruns"}
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -55,8 +57,6 @@ echo -e "${BLUE}📍 MLflow version: ${MLFLOW_VERSION}${NC}"
 echo -e "${BLUE}📍 Server will be available at: http://$HOST:$PORT${NC}"
 echo -e "${YELLOW}💡 Press Ctrl+C to stop the server${NC}"
 echo ""
-
-mkdir -p bin
 
 # Start MLflow server in background
 mlflow server \
@@ -122,6 +122,7 @@ if wait_for_server; then
     # Server is ready - if running in background mode, exit successfully
     # The server will continue running in the background
     echo "Server is ready"
+    echo "export MLFLOW_TRACKING_URI=http://$HOST:$PORT"
     # exit 0
 else
     # Server didn't start properly - try to clean up
