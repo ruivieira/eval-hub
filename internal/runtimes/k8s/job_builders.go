@@ -27,7 +27,6 @@ const (
 	specSuffix                      = "-spec"
 	envJobIDName                    = "JOB_ID"
 	envEvalHubURLName               = "EVALHUB_URL"
-	envJobSpecPathName              = "EVALHUB_JOB_SPEC_PATH"
 	defaultAllowPrivilegeEscalation = false
 	defaultRunAsUser                = int64(1000)
 	defaultRunAsGroup               = int64(1000)
@@ -268,13 +267,6 @@ func buildEnvVars(cfg *jobConfig) []corev1.EnvVar {
 		})
 		seen[envEvalHubURLName] = true
 	}
-
-	// Add EVALHUB_JOB_SPEC_PATH
-	env = append(env, corev1.EnvVar{
-		Name:  envJobSpecPathName,
-		Value: jobSpecMountPath,
-	})
-	seen[envJobSpecPathName] = true
 
 	// Add provider-specific environment variables
 	for _, item := range cfg.defaultEnv {
