@@ -75,9 +75,9 @@ func TestBuildJobConfigDefaults(t *testing.T) {
 	if err := json.Unmarshal([]byte(cfg.jobSpecJSON), &decoded); err != nil {
 		t.Fatalf("unmarshal job spec json: %v", err)
 	}
-	jobID, ok := decoded["job_id"].(string)
+	jobID, ok := decoded["id"].(string)
 	if !ok || jobID != "job-123" {
-		t.Fatalf("expected job spec json job_id to be %q, got %v", "job-123", decoded["job_id"])
+		t.Fatalf("expected job spec json id to be %q, got %v", "job-123", decoded["id"])
 	}
 	benchmarkID, ok := decoded["benchmark_id"].(string)
 	if !ok || benchmarkID != "bench-1" {
