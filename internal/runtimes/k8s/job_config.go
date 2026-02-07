@@ -45,7 +45,7 @@ type jobConfig struct {
 }
 
 type jobSpec struct {
-	JobID           string              `json:"job_id"`
+	JobID           string              `json:"id"`
 	BenchmarkID     string              `json:"benchmark_id"`
 	Model           api.ModelRef        `json:"model"`
 	NumExamples     *int                `json:"num_examples,omitempty"`
