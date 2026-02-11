@@ -249,6 +249,11 @@ func LoadConfig(logger *slog.Logger, version string, build string, buildDate str
 		return nil, err
 	}
 
+	// ensure Service is initialised (the operator-generated config may omit it)
+	if conf.Service == nil {
+		conf.Service = &ServiceConfig{}
+	}
+
 	// set the version, build, and build date
 	conf.Service.Version = version
 	conf.Service.Build = build

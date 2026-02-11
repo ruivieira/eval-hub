@@ -109,6 +109,34 @@ database:
 		}
 	})
 
+	t.Run("config without service section does not panic", func(t *testing.T) {
+		// Operator-generated configs may omit the service section entirely
+		tmpDir := t.TempDir()
+		configContent := `
+database:
+  driver: pgx
+secrets:
+  dir: /tmp
+  mappings:
+    db-url:optional: database.url
+`
+		err := os.WriteFile(filepath.Join(tmpDir, "config.yaml"), []byte(configContent), 0600)
+		if err != nil {
+			t.Fatalf("Failed to write temp config: %v", err)
+		}
+
+		serviceConfig, err := config.LoadConfig(logger, "0.0.1", "local", time.Now().Format(time.RFC3339), tmpDir)
+		if err != nil {
+			t.Fatalf("Failed to load config: %v", err)
+		}
+		if serviceConfig.Service == nil {
+			t.Fatalf("Service should be initialised even when absent from config")
+		}
+		if serviceConfig.Service.Version != "0.0.1" {
+			t.Fatalf("Expected version 0.0.1, got %s", serviceConfig.Service.Version)
+		}
+	})
+
 	t.Run("loading config from secrets directory", func(t *testing.T) {
 		// create a secret and store in /tmp/db_password
 		secret := "mysecret"
