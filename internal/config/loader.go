@@ -197,20 +197,30 @@ func LoadConfig(logger *slog.Logger, version string, build string, buildDate str
 		dirs = []string{"config", "./config", "../../config", "tests"} // tests is for running the service on a local machine (not local mode)
 	}
 
-	// If CONFIG_PATH is set, prepend its directory so the operator-mounted
-	// config is found before the image's built-in defaults.
-	if configPath := os.Getenv("CONFIG_PATH"); configPath != "" {
-		dir := filepath.Dir(configPath)
-		logger.Info("CONFIG_PATH set, prepending config directory", "config_path", configPath, "dir", dir)
-		dirs = append([]string{dir}, dirs...)
-	}
 	configValues, err := readConfig(logger, "config", "yaml", dirs...)
 	if err != nil {
 		logger.Error("Failed to read configuration file config.yaml", "error", err.Error(), "dirs", dirs)
 		return nil, err
 	}
 
-	// now load the cluster config if found
+	// If CONFIG_PATH is set, merge the operator-mounted config on top of the
+	// bundled defaults so that values like service.port are preserved while
+	// the operator can override database, secrets, etc.
+	if configPath := os.Getenv("CONFIG_PATH"); configPath != "" {
+		logger.Info("CONFIG_PATH set, merging operator config", "config_path", configPath)
+		// Clear secrets before merge — MergeInConfig deep-merges maps, so
+		// bundled secret mappings would persist alongside operator ones.
+		// Secrets are deployment-specific and must come entirely from the
+		// operator config.
+		configValues.Set("secrets", map[string]any{})
+		configValues.SetConfigFile(configPath)
+		if err := configValues.MergeInConfig(); err != nil {
+			logger.Error("Failed to merge CONFIG_PATH config", "config_path", configPath, "error", err.Error())
+			return nil, err
+		}
+		logger.Info("Merged operator config", "config_path", configPath)
+	}
+
 	// set up the secrets from the secrets directory
 	secrets := SecretMap{}
 	if secretsSub := configValues.Sub("secrets"); secretsSub != nil {
@@ -247,11 +257,6 @@ func LoadConfig(logger *slog.Logger, version string, build string, buildDate str
 	if err := configValues.Unmarshal(&conf); err != nil {
 		logger.Error("Failed to unmarshal configuration", "error", err.Error())
 		return nil, err
-	}
-
-	// ensure Service is initialised (the operator-generated config may omit it)
-	if conf.Service == nil {
-		conf.Service = &ServiceConfig{}
 	}
 
 	// set the version, build, and build date
