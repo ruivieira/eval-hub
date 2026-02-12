@@ -2,7 +2,10 @@ package mlflow
 
 import (
 	"context"
+	"crypto/tls"
 	"log/slog"
+	"net/http"
+	"time"
 
 	"github.com/eval-hub/eval-hub/internal/config"
 	"github.com/eval-hub/eval-hub/internal/messages"
@@ -11,10 +14,10 @@ import (
 	"github.com/eval-hub/eval-hub/pkg/mlflowclient"
 )
 
-func NewMLFlowClient(config *config.Config, logger *slog.Logger) *mlflowclient.Client {
+func NewMLFlowClient(mlflowConfig *config.MLFlowConfig, logger *slog.Logger) *mlflowclient.Client {
 	url := ""
-	if config.MLFlow != nil && config.MLFlow.TrackingURI != "" {
-		url = config.MLFlow.TrackingURI
+	if mlflowConfig != nil && mlflowConfig.TrackingURI != "" {
+		url = mlflowConfig.TrackingURI
 	}
 
 	if url == "" {
@@ -22,7 +25,38 @@ func NewMLFlowClient(config *config.Config, logger *slog.Logger) *mlflowclient.C
 		return nil
 	}
 
-	client := mlflowclient.NewClient(url).WithContext(context.Background()).WithLogger(logger)
+	if mlflowConfig.HTTPTimeout == 0 {
+		mlflowConfig.HTTPTimeout = 30 * time.Second
+	}
+
+	// for now we create a default TLS config if the secure flag is set and no TLS config is provided
+	if mlflowConfig.Secure && (mlflowConfig.TLSConfig == nil) {
+		mlflowConfig.TLSConfig = &tls.Config{
+			InsecureSkipVerify: false,
+			RootCAs:            nil, // we might need to load certificates
+			ClientCAs:          nil, // we might need to load certificates
+			ClientAuth:         tls.NoClientCert,
+			MinVersion:         tls.VersionTLS12,
+			MaxVersion:         tls.VersionTLS13,
+		}
+	}
+
+	var transport *http.Transport
+	if mlflowConfig.TLSConfig != nil {
+		transport = &http.Transport{
+			TLSClientConfig: mlflowConfig.TLSConfig,
+		}
+	}
+
+	httpClient := &http.Client{
+		Timeout:   mlflowConfig.HTTPTimeout,
+		Transport: transport,
+	}
+
+	client := mlflowclient.NewClient(url).
+		WithContext(context.Background()). // this is a fallback, each request needs to provide the context for the API call
+		WithLogger(logger).
+		WithHTTPClient(httpClient)
 
 	logger.Info("MLFlow tracking enabled", "mlflow_experiment_url", client.GetExperimentsURL())
 
