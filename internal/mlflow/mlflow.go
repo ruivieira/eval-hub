@@ -3,8 +3,11 @@ package mlflow
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"log/slog"
 	"net/http"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/eval-hub/eval-hub/internal/config"
@@ -29,35 +32,69 @@ func NewMLFlowClient(config *config.Config, logger *slog.Logger) *mlflowclient.C
 		config.MLFlow.HTTPTimeout = 30 * time.Second
 	}
 
-	// for now we create a default TLS config if the secure flag is set and no TLS config is provided
-	if config.MLFlow.Secure && (config.MLFlow.TLSConfig == nil) {
-		config.MLFlow.TLSConfig = &tls.Config{
-			InsecureSkipVerify: false,
-			RootCAs:            nil, // we might need to load certificates
-			ClientCAs:          nil, // we might need to load certificates
-			ClientAuth:         tls.NoClientCert,
-			MinVersion:         tls.VersionTLS12,
-			MaxVersion:         tls.VersionTLS13,
+	// Build TLS config if not already provided
+	if config.MLFlow.TLSConfig == nil {
+		tlsConfig := &tls.Config{
+			MinVersion: tls.VersionTLS12,
+			MaxVersion: tls.VersionTLS13,
 		}
+
+		// Load custom CA certificate if specified
+		if config.MLFlow.CACertPath != "" {
+			caCert, err := os.ReadFile(config.MLFlow.CACertPath)
+			if err != nil {
+				logger.Error("Failed to read MLflow CA certificate", "path", config.MLFlow.CACertPath, "error", err)
+			} else {
+				caCertPool := x509.NewCertPool()
+				if caCertPool.AppendCertsFromPEM(caCert) {
+					tlsConfig.RootCAs = caCertPool
+					logger.Info("Loaded MLflow CA certificate", "path", config.MLFlow.CACertPath)
+				} else {
+					logger.Error("Failed to parse MLflow CA certificate", "path", config.MLFlow.CACertPath)
+				}
+			}
+		}
+
+		if config.MLFlow.InsecureSkipVerify {
+			tlsConfig.InsecureSkipVerify = true
+			logger.Warn("MLflow TLS certificate verification is disabled")
+		}
+
+		config.MLFlow.TLSConfig = tlsConfig
 	}
 
 	httpClient := &http.Client{
 		Timeout: config.MLFlow.HTTPTimeout,
-	}
-
-	if config.MLFlow.TLSConfig != nil {
-		httpClient = &http.Client{
-			Timeout: config.MLFlow.HTTPTimeout,
-			Transport: &http.Transport{
-				TLSClientConfig: config.MLFlow.TLSConfig,
-			},
-		}
+		Transport: &http.Transport{
+			TLSClientConfig: config.MLFlow.TLSConfig,
+		},
 	}
 
 	client := mlflowclient.NewClient(url).
-		WithContext(context.Background()). // this is a fallback, each request needs to provide the context for the API call
+		WithContext(context.Background()).
 		WithLogger(logger).
 		WithHTTPClient(httpClient)
+
+	// Load auth token from file if configured, falling back to the Kubernetes SA token
+	tokenPath := config.MLFlow.TokenPath
+	if tokenPath == "" {
+		tokenPath = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+	}
+	if tokenData, err := os.ReadFile(tokenPath); err == nil {
+		token := strings.TrimSpace(string(tokenData))
+		if token != "" {
+			client = client.WithToken(token)
+			logger.Info("MLflow auth token loaded", "path", tokenPath)
+		}
+	} else {
+		logger.Warn("No MLflow auth token found", "path", tokenPath, "error", err)
+	}
+
+	// Set workspace if configured
+	if config.MLFlow.Workspace != "" {
+		client = client.WithWorkspace(config.MLFlow.Workspace)
+		logger.Info("MLflow workspace configured", "workspace", config.MLFlow.Workspace)
+	}
 
 	logger.Info("MLFlow tracking enabled", "mlflow_experiment_url", client.GetExperimentsURL())
 
