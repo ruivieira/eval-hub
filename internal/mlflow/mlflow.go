@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -17,7 +18,7 @@ import (
 	"github.com/eval-hub/eval-hub/pkg/mlflowclient"
 )
 
-func NewMLFlowClient(config *config.Config, logger *slog.Logger) *mlflowclient.Client {
+func NewMLFlowClient(config *config.Config, logger *slog.Logger) (*mlflowclient.Client, error) {
 	url := ""
 	if config.MLFlow != nil && config.MLFlow.TrackingURI != "" {
 		url = config.MLFlow.TrackingURI
@@ -25,7 +26,7 @@ func NewMLFlowClient(config *config.Config, logger *slog.Logger) *mlflowclient.C
 
 	if url == "" {
 		logger.Warn("MLFlow tracking URI is not set, skipping MLFlow client creation")
-		return nil
+		return nil, nil
 	}
 
 	if config.MLFlow.HTTPTimeout == 0 {
@@ -43,16 +44,14 @@ func NewMLFlowClient(config *config.Config, logger *slog.Logger) *mlflowclient.C
 		if config.MLFlow.CACertPath != "" {
 			caCert, err := os.ReadFile(config.MLFlow.CACertPath)
 			if err != nil {
-				logger.Error("Failed to read MLflow CA certificate", "path", config.MLFlow.CACertPath, "error", err)
-			} else {
-				caCertPool := x509.NewCertPool()
-				if caCertPool.AppendCertsFromPEM(caCert) {
-					tlsConfig.RootCAs = caCertPool
-					logger.Info("Loaded MLflow CA certificate", "path", config.MLFlow.CACertPath)
-				} else {
-					logger.Error("Failed to parse MLflow CA certificate", "path", config.MLFlow.CACertPath)
-				}
+				return nil, fmt.Errorf("failed to read MLflow CA certificate at %s: %w", config.MLFlow.CACertPath, err)
 			}
+			caCertPool := x509.NewCertPool()
+			if !caCertPool.AppendCertsFromPEM(caCert) {
+				return nil, fmt.Errorf("failed to parse MLflow CA certificate at %s: file contains no valid PEM certificates", config.MLFlow.CACertPath)
+			}
+			tlsConfig.RootCAs = caCertPool
+			logger.Info("Loaded MLflow CA certificate", "path", config.MLFlow.CACertPath)
 		}
 
 		if config.MLFlow.InsecureSkipVerify {
@@ -98,7 +97,7 @@ func NewMLFlowClient(config *config.Config, logger *slog.Logger) *mlflowclient.C
 
 	logger.Info("MLFlow tracking enabled", "mlflow_experiment_url", client.GetExperimentsURL())
 
-	return client
+	return client, nil
 }
 
 func GetExperimentID(mlflowClient *mlflowclient.Client, experiment *api.ExperimentConfig) (experimentID string, experimentURL string, err error) {
