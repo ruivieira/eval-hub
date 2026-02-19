@@ -4,7 +4,7 @@ description: Lightweight LLM evaluation framework from Hugging Face
 type: builtin
 runtime:
   k8s:
-    image: quay.io/evalhub/community-lighteval:latest
+    image: quay.io/evalhub/community-lighteval:v0.1.0
     entrypoint:
       - python
       - main.py
