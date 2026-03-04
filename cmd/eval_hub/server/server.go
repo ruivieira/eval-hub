@@ -432,7 +432,11 @@ func (s *Server) Start() error {
 	if err != nil {
 		return err
 	}
-	addr := fmt.Sprintf("%s:%d", s.serviceConfig.Service.Host, s.port)
+	host := s.serviceConfig.Service.Host
+	if host == "" {
+		host = "127.0.0.1"
+	}
+	addr := fmt.Sprintf("%s:%d", host, s.port)
 	s.httpServer = &http.Server{
 		Addr:         addr,
 		Handler:      handler,
