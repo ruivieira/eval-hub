@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/eval-hub/eval-hub/auth"
@@ -440,7 +442,7 @@ func (s *Server) Start() error {
 	if host == "" {
 		host = "127.0.0.1"
 	}
-	addr := fmt.Sprintf("%s:%d", host, s.port)
+	addr := net.JoinHostPort(host, strconv.Itoa(s.port))
 	s.httpServer = &http.Server{
 		Addr:         addr,
 		Handler:      handler,
