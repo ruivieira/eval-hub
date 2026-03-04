@@ -428,6 +428,10 @@ func (s *Server) SetupRoutes() (http.Handler, error) {
 }
 
 func (s *Server) Start() error {
+	if err := s.serviceConfig.Service.ValidateTLSConfig(); err != nil {
+		return err
+	}
+
 	handler, err := s.setupRoutes()
 	if err != nil {
 		return err

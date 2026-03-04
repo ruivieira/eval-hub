@@ -1,5 +1,7 @@
 package config
 
+import "fmt"
+
 type ServiceConfig struct {
 	Version         string `mapstructure:"version,omitempty"`
 	Build           string `mapstructure:"build,omitempty"`
@@ -17,4 +19,13 @@ type ServiceConfig struct {
 // TLSEnabled returns true when both TLS cert and key paths are configured.
 func (c *ServiceConfig) TLSEnabled() bool {
 	return c.TLSCertFile != "" && c.TLSKeyFile != ""
+}
+
+// ValidateTLSConfig returns an error when exactly one of TLSCertFile or
+// TLSKeyFile is set, which would cause a silent fallback to plain HTTP.
+func (c *ServiceConfig) ValidateTLSConfig() error {
+	if (c.TLSCertFile != "") != (c.TLSKeyFile != "") {
+		return fmt.Errorf("partial TLS config: both TLSCertFile and TLSKeyFile must be provided")
+	}
+	return nil
 }
