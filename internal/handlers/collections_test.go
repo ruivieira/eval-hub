@@ -55,7 +55,7 @@ func (s *listCollectionsStorage) WithContext(_ context.Context) abstractions.Sto
 	return s
 }
 func (s *listCollectionsStorage) WithTenant(_ api.Tenant) abstractions.Storage { return s }
-func (s *listCollectionsStorage) WithOwner(_ api.User) abstractions.Storage   { return s }
+func (s *listCollectionsStorage) WithOwner(_ api.User) abstractions.Storage    { return s }
 
 func (s *listCollectionsStorage) GetCollections(_ *abstractions.QueryFilter) (*abstractions.QueryResults[api.CollectionResource], error) {
 	if s.err != nil {
@@ -78,7 +78,7 @@ func (s *getCollectionStorage) WithContext(_ context.Context) abstractions.Stora
 	return s
 }
 func (s *getCollectionStorage) WithTenant(_ api.Tenant) abstractions.Storage { return s }
-func (s *getCollectionStorage) WithOwner(_ api.User) abstractions.Storage   { return s }
+func (s *getCollectionStorage) WithOwner(_ api.User) abstractions.Storage    { return s }
 
 func (s *getCollectionStorage) GetCollection(id string) (*api.CollectionResource, error) {
 	if s.err != nil {
@@ -101,7 +101,7 @@ func (s *createCollectionStorage) WithContext(_ context.Context) abstractions.St
 	return s
 }
 func (s *createCollectionStorage) WithTenant(_ api.Tenant) abstractions.Storage { return s }
-func (s *createCollectionStorage) WithOwner(_ api.User) abstractions.Storage   { return s }
+func (s *createCollectionStorage) WithOwner(_ api.User) abstractions.Storage    { return s }
 
 func (s *createCollectionStorage) CreateCollection(c *api.CollectionResource) error {
 	if s.err != nil {
@@ -126,7 +126,7 @@ func (s *updatePatchDeleteCollectionStorage) WithContext(_ context.Context) abst
 	return s
 }
 func (s *updatePatchDeleteCollectionStorage) WithTenant(_ api.Tenant) abstractions.Storage { return s }
-func (s *updatePatchDeleteCollectionStorage) WithOwner(_ api.User) abstractions.Storage   { return s }
+func (s *updatePatchDeleteCollectionStorage) WithOwner(_ api.User) abstractions.Storage    { return s }
 
 func (s *updatePatchDeleteCollectionStorage) GetCollection(id string) (*api.CollectionResource, error) {
 	if s.collection != nil && s.collection.Resource.ID == id {
@@ -446,10 +446,10 @@ type tenantTrackingStorage struct {
 	owner  api.User
 }
 
-func (s *tenantTrackingStorage) WithLogger(_ *slog.Logger) abstractions.Storage       { return s }
-func (s *tenantTrackingStorage) WithContext(_ context.Context) abstractions.Storage    { return s }
-func (s *tenantTrackingStorage) WithTenant(t api.Tenant) abstractions.Storage         { s.tenant = t; return s }
-func (s *tenantTrackingStorage) WithOwner(u api.User) abstractions.Storage            { s.owner = u; return s }
+func (s *tenantTrackingStorage) WithLogger(_ *slog.Logger) abstractions.Storage     { return s }
+func (s *tenantTrackingStorage) WithContext(_ context.Context) abstractions.Storage { return s }
+func (s *tenantTrackingStorage) WithTenant(t api.Tenant) abstractions.Storage       { s.tenant = t; return s }
+func (s *tenantTrackingStorage) WithOwner(u api.User) abstractions.Storage          { s.owner = u; return s }
 func (s *tenantTrackingStorage) GetCollections(_ *abstractions.QueryFilter) (*abstractions.QueryResults[api.CollectionResource], error) {
 	return &abstractions.QueryResults[api.CollectionResource]{Items: []api.CollectionResource{}, TotalCount: 0}, nil
 }
