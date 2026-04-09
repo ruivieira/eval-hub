@@ -10,6 +10,10 @@ properties:
   benchmark_index:
     type: integer
     description: Benchmark index in the evaluation job request
+  primary_metric:
+    type: string
+    nullable: true
+    description: Name of the primary metric from the provider's benchmark definition, or null if not defined
   metrics:
     type: object
     additionalProperties: true

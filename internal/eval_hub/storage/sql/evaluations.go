@@ -408,19 +408,20 @@ func (s *sqlStorage) UpdateEvaluationJob(id string, runStatus *api.StatusEvent) 
 		}
 		s.updateBenchmarkStatus(job, runStatus, &benchmark)
 
-		outcome := s.computeBenchmarkTestResult(job, runStatus.BenchmarkStatusEvent, collection)
+		outcome := s.computeBenchmarkOutcome(job, runStatus.BenchmarkStatusEvent, collection)
 
 		// if the run status is terminal, we need to update the results
 		if api.IsBenchmarkTerminalState(runStatus.BenchmarkStatusEvent.Status) {
 			result := api.BenchmarkResult{
 				ID:             runStatus.BenchmarkStatusEvent.ID,
 				ProviderID:     runStatus.BenchmarkStatusEvent.ProviderID,
+				PrimaryMetric:  outcome.PrimaryMetric,
 				Metrics:        runStatus.BenchmarkStatusEvent.Metrics,
 				Artifacts:      runStatus.BenchmarkStatusEvent.Artifacts,
 				MLFlowRunID:    runStatus.BenchmarkStatusEvent.MLFlowRunID,
 				LogsPath:       runStatus.BenchmarkStatusEvent.LogsPath,
 				BenchmarkIndex: runStatus.BenchmarkStatusEvent.BenchmarkIndex,
-				Test:           outcome,
+				Test:           outcome.Test,
 			}
 			err := s.updateBenchmarkResults(job, runStatus, &result)
 			if err != nil {
@@ -524,15 +525,21 @@ func (s *sqlStorage) getPassCriteriaThreshold(job *api.EvaluationJobResource, co
 	return 0.5
 }
 
-func (s *sqlStorage) computeBenchmarkTestResult(job *api.EvaluationJobResource, benchmarkStatusEvent *api.BenchmarkStatusEvent, collection *api.CollectionResource) *api.BenchmarkTest {
-	// job could have benchmarks array or it could have collection. If it has collection, we need to get the benchmarks from the collection
+// benchmarkOutcome bundles the results of a single provider lookup: the optional test
+// result (pass/fail) and the provider-defined primary metric name.
+type benchmarkOutcome struct {
+	Test          *api.BenchmarkTest
+	PrimaryMetric *string
+}
+
+func (s *sqlStorage) computeBenchmarkOutcome(job *api.EvaluationJobResource, benchmarkStatusEvent *api.BenchmarkStatusEvent, collection *api.CollectionResource) benchmarkOutcome {
 	benchmarks, err := handlers.GetJobBenchmarks(job, collection)
 	if err != nil {
 		s.logger.Error("Failed to get job benchmarks", "error", err, "job_id", job.Resource.ID)
-		return nil
+		return benchmarkOutcome{}
 	}
 	if len(benchmarks) == 0 {
-		return nil
+		return benchmarkOutcome{}
 	}
 	for _, benchmark := range benchmarks {
 		if benchmark.ID != benchmarkStatusEvent.ID || benchmark.ProviderID != benchmarkStatusEvent.ProviderID {
@@ -540,8 +547,8 @@ func (s *sqlStorage) computeBenchmarkTestResult(job *api.EvaluationJobResource, 
 		}
 		primaryScore := benchmark.PrimaryScore
 		var providerBench *api.BenchmarkResource
-		// if the primary score is not defined, we need to get the primary score from the provider
-		if (primaryScore == nil || primaryScore.Metric == "") && benchmark.ProviderID != "" {
+		// single provider lookup: resolves both primary_metric and fallback primary_score
+		if benchmark.ProviderID != "" {
 			provider, err := s.GetProvider(benchmark.ProviderID)
 			if err == nil && provider != nil {
 				for i := range provider.Benchmarks {
@@ -551,17 +558,25 @@ func (s *sqlStorage) computeBenchmarkTestResult(job *api.EvaluationJobResource, 
 					}
 				}
 			}
-			if providerBench != nil && providerBench.PrimaryScore != nil && providerBench.PrimaryScore.Metric != "" {
-				primaryScore = providerBench.PrimaryScore
-			}
 		}
+		// fall back to provider-level primary score if not set on the job benchmark
+		if (primaryScore == nil || primaryScore.Metric == "") && providerBench != nil &&
+			providerBench.PrimaryScore != nil && providerBench.PrimaryScore.Metric != "" {
+			primaryScore = providerBench.PrimaryScore
+		}
+
+		// resolve primary_metric from provider benchmark definition
+		var primaryMetric *string
+		if providerBench != nil {
+			primaryMetric = providerBench.PrimaryMetric
+		}
+
 		if primaryScore != nil && primaryScore.Metric != "" {
-			primaryMetric := primaryScore.Metric
-			if primaryMetricValue, ok := benchmarkStatusEvent.Metrics[primaryMetric]; ok {
+			if primaryMetricValue, ok := benchmarkStatusEvent.Metrics[primaryScore.Metric]; ok {
 				primaryMetricValueFloat, err := castAnyToFloat32(primaryMetricValue)
 				if err != nil {
-					s.logger.Error("Failed to cast primary metric value to float32", "error", err, "primary_metric", primaryMetric, "primary_metric_value", primaryMetricValue)
-					return nil
+					s.logger.Error("Failed to cast primary metric value to float32", "error", err, "primary_metric", primaryScore.Metric, "primary_metric_value", primaryMetricValue)
+					return benchmarkOutcome{PrimaryMetric: primaryMetric}
 				}
 				var threshold float32
 				if benchmark.PassCriteria != nil {
@@ -569,21 +584,25 @@ func (s *sqlStorage) computeBenchmarkTestResult(job *api.EvaluationJobResource, 
 				} else if providerBench != nil && providerBench.PassCriteria != nil {
 					threshold = providerBench.PassCriteria.Threshold
 				} else {
-					return nil
+					return benchmarkOutcome{PrimaryMetric: primaryMetric}
 				}
 				pass := primaryMetricValueFloat >= threshold
 				if primaryScore.LowerIsBetter {
 					pass = primaryMetricValueFloat <= threshold
 				}
-				return &api.BenchmarkTest{
-					PrimaryScore: primaryMetricValueFloat,
-					Threshold:    threshold,
-					Pass:         pass,
+				return benchmarkOutcome{
+					Test: &api.BenchmarkTest{
+						PrimaryScore: primaryMetricValueFloat,
+						Threshold:    threshold,
+						Pass:         pass,
+					},
+					PrimaryMetric: primaryMetric,
 				}
 			}
 		}
+		return benchmarkOutcome{PrimaryMetric: primaryMetric}
 	}
-	return nil
+	return benchmarkOutcome{}
 }
 
 func castAnyToFloat32(primaryMetricValue any) (float32, error) {

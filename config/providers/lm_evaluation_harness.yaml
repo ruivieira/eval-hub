@@ -30,6 +30,7 @@ benchmarks:
     metrics:
       - accuracy
       - acc_norm
+    primary_metric: acc_norm
     num_few_shot: 0
     dataset_size: 2376
     tags:
@@ -54,6 +55,7 @@ benchmarks:
     category: general
     metrics:
       - accuracy
+    primary_metric: accuracy
     num_few_shot: 0
     dataset_size: 1000
     tags:
